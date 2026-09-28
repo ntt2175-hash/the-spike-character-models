@@ -42,13 +42,14 @@ def default_width(u, tip_start=0.45, root=0.12, root_min=0.7, tip_power=0.75):
 
 
 def lock(points, width, thickness, *, outward, ring=10, samples=10, tip_start=0.45, tip_power=0.75, root_min=0.7,
-         crescent=0.18, twist_deg=0.0, thickness_tip=0.25, width_fn=None):
+         crescent=0.18, twist_deg=0.0, thickness_tip=0.25, width_fn=None, thickness_fn=None):
     """Sweep one lock.
 
     points   : control points (root first)
     width    : max width (m)
     thickness: max thickness (m)
     outward  : callable(p) -> unit vector pointing away from the scalp at p (flat axis), or a fixed vector
+    thickness_fn: optional callable(u) -> thickness multiplier (e.g. thin roots that grow out of the scalp)
     Returns (verts (N,3), faces (list of index tuples), along (N,))
     """
     path = catmull_rom(points, samples)
@@ -78,7 +79,7 @@ def lock(points, width, thickness, *, outward, ring=10, samples=10, tip_start=0.
             w_axis, f = w_axis * ca + f * sa, -w_axis * sa + f * ca
         wk = width_fn(u[i]) if width_fn else default_width(u[i], tip_start, 0.12, root_min, tip_power)
         hw = 0.5 * width * wk
-        th = 0.5 * thickness * (thickness_tip + (1.0 - thickness_tip) * wk)
+        th = 0.5 * thickness * (thickness_tip + (1.0 - thickness_tip) * wk) * (thickness_fn(u[i]) if thickness_fn else 1.0)
         for j in range(ring):
             a = 2.0 * math.pi * j / ring
             x = math.cos(a)
@@ -129,3 +130,49 @@ class LockBatch:
 
     def arrays(self):
         return (np.concatenate(self.verts), self.faces, np.concatenate(self.along), np.concatenate(self.lock_id))
+
+
+def sheet(columns, thickness_fn, ridge_fn=None, center=None, col_scale=None):
+    """A closed shell swept from a list of column paths (same point count each, root first).
+
+    Used for masses that must read as one surface and only split at the edge (a fringe cut into
+    points): the front surface follows the columns, the back is offset toward `center` by
+    thickness_fn(v) (times col_scale per column), and all borders are closed with rims. ridge_fn(i, v) pushes the front surface
+    outward to model shallow lock ridges. Returns (verts, faces, along).
+    """
+    F = np.asarray(columns, dtype=np.float64)            # (n_cols, n_v, 3)
+    nc, nv, _ = F.shape
+    dI = np.gradient(F, axis=0)
+    dV = np.gradient(F, axis=1)
+    N = np.cross(dI, dV)
+    N /= np.maximum(np.linalg.norm(N, axis=2, keepdims=True), 1e-12)
+    c = np.asarray(center if center is not None else F.reshape(-1, 3).mean(axis=0))
+    flip = np.sum(N * (F - c), axis=2) < 0
+    N[flip] *= -1.0
+    v = np.linspace(0.0, 1.0, nv)
+    if ridge_fn is not None:
+        R = np.array([[ridge_fn(i, vv) for vv in v] for i in range(nc)])
+        F = F + N * R[..., None]
+    T = np.array([thickness_fn(vv) for vv in v])[None, :, None]
+    if col_scale is not None:
+        T = T * np.asarray(col_scale, dtype=np.float64)[:, None, None]
+    B = F - N * T
+    verts = np.concatenate([F.reshape(-1, 3), B.reshape(-1, 3)])
+    off = nc * nv
+    idx = lambda i, j: i * nv + j  # noqa: E731
+    faces = []
+    for i in range(nc - 1):
+        for j in range(nv - 1):
+            a, b, cc, d = idx(i, j), idx(i + 1, j), idx(i + 1, j + 1), idx(i, j + 1)
+            faces.append((a, b, cc, d))
+            faces.append((d + off, cc + off, b + off, a + off))
+    for i in range(nc - 1):                               # root and edge rims
+        for j in (0, nv - 1):
+            a, b = idx(i, j), idx(i + 1, j)
+            faces.append((a, b, b + off, a + off) if j else (b, a, a + off, b + off))
+    for j in range(nv - 1):                               # side rims
+        for i in (0, nc - 1):
+            a, b = idx(i, j), idx(i, j + 1)
+            faces.append((a, b, b + off, a + off) if i == 0 else (b, a, a + off, b + off))
+    along = np.concatenate([np.tile(v, nc), np.tile(v, nc)])
+    return verts, faces, along

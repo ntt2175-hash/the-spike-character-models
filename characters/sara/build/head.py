@@ -21,7 +21,7 @@ from spike_pipeline.modeling import paint
 
 from common import CHAR, log
 
-HS = 1.12                               # head scale from the art-direction pass (7.9 heads with hair)
+HS = 1.07                               # head scale: proportion pass (balanced against the slimmer, longer body)
 EYE_X, EYE_Z = 0.039, 1.5461            # painted eye centers (eye spacing 78 mm); LeftEye bone height
 CHIN_Z = EYE_Z - 0.078 * HS             # acorn face: eye line to chin ~1.1x the eye spacing
 CROWN_Z = EYE_Z + 0.089 * HS            # top of the skull (hair adds ~2 cm)

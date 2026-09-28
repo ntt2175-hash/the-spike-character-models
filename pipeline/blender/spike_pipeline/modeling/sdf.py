@@ -140,6 +140,126 @@ class Transformed:
 
 
 # ---------------------------------------------------------------------------
+# lofts: smooth, continuous anatomical forms (the body is sculpted as profiles, not blobs)
+# ---------------------------------------------------------------------------
+def smooth_table(ts, vals, n=256):
+    """Dense, C1-smooth resampling of station values (Catmull-Rom through the stations).
+    ts: (k,) increasing; vals: (k, m). Returns (t_dense (n,), v_dense (n, m))."""
+    ts = np.asarray(ts, dtype=np.float64)
+    V = np.asarray(vals, dtype=np.float64)
+    if V.ndim == 1:
+        V = V[:, None]
+    P = np.concatenate([ts[:, None], V], axis=1)
+    P = np.concatenate([P[:1] * 2 - P[1:2], P, P[-1:] * 2 - P[-2:-1]])
+    out = []
+    per = max(4, n // (len(ts) - 1))
+    for i in range(1, len(P) - 2):
+        p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
+        for k in range(per):
+            t = k / per
+            t2, t3 = t * t, t * t * t
+            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3))
+    out.append(P[-2])
+    out = np.asarray(out)
+    order = np.argsort(out[:, 0], kind="stable")
+    return out[order, 0], out[order, 1:]
+
+
+def _interp_cols(t, T, V):
+    return [np.interp(t, T, V[:, j]) for j in range(V.shape[1])]
+
+
+def _superellipse_distance(x, y, rx, ry, n):
+    """First-order distance to |x/rx|^n + |y/ry|^n = 1 (exact zero set, well-behaved near it)."""
+    ax, ay = np.abs(x) / rx, np.abs(y) / ry
+    s = ax ** n + ay ** n
+    k = s ** (1.0 / n)
+    kk = np.maximum(k, 1e-9)
+    gx = kk ** (1.0 - n) * np.maximum(ax, 1e-12) ** (n - 1.0) / rx
+    gy = kk ** (1.0 - n) * np.maximum(ay, 1e-12) ** (n - 1.0) / ry
+    g = np.sqrt(gx * gx + gy * gy)
+    d = (k - 1.0) / np.maximum(g, 1e-9)
+    return np.maximum(d, -np.minimum(rx, ry))
+
+
+class Loft:
+    """A limb segment from a to b whose cross-section is an asymmetric ellipse that varies smoothly
+    along the segment: stations rows (t, r_out, r_in, r_front, r_back), t in [0, 1]. u_hint points to
+    the 'out' side (away from the body midline), v_hint to the 'front'. Beyond the ends the section
+    is held for ext[i] and then closed with a rounded cap, so segments meeting at a joint with matched
+    radii read as one continuous limb."""
+
+    def __init__(self, a, b, stations, u_hint, v_hint=(0.0, -1.0, 0.0), ext=(0.0, 0.0), n=2.0, cap=(1.0, 1.0)):
+        self.a = np.asarray(a, dtype=np.float64)
+        self.b = np.asarray(b, dtype=np.float64)
+        ax = self.b - self.a
+        self.L = float(np.linalg.norm(ax))
+        self.ax = ax / self.L
+        u = np.asarray(u_hint, dtype=np.float64)
+        u = u - self.ax * (u @ self.ax)
+        self.u = u / np.linalg.norm(u)
+        v = np.cross(self.ax, self.u)
+        self.v = v if v @ np.asarray(v_hint, dtype=np.float64) >= 0 else -v
+        st = np.asarray(stations, dtype=np.float64)
+        self.T, self.R = smooth_table(st[:, 0], st[:, 1:5])
+        self.ext = ext
+        self.n = n
+        self.cap = cap           # cap length as a fraction of the end radius (1 = hemisphere, <1 = flattened)
+
+    def bbox(self):
+        r = float(self.R.max()) * max(1.0, *self.cap) + max(self.ext)
+        return np.minimum(self.a, self.b) - r, np.maximum(self.a, self.b) + r
+
+    def eval(self, P):
+        q = P - self.a
+        t = (q @ self.ax) / self.L
+        x, y = q @ self.u, q @ self.v
+        tc = np.clip(t, 0.0, 1.0)
+        ro, ri, rf, rb = _interp_cols(tc, self.T, self.R)
+        rx = np.where(x >= 0, ro, ri)
+        ry = np.where(y >= 0, rf, rb)
+        e = np.where(t < 0, np.maximum(-t * self.L - self.ext[0], 0.0), np.maximum((t - 1.0) * self.L - self.ext[1], 0.0))
+        rc = np.minimum(rx, ry) * np.where(t < 0.5, self.cap[0], self.cap[1])
+        sc = np.sqrt(np.clip(1.0 - (e / rc) ** 2, 0.0, 1.0))
+        d = _superellipse_distance(x, y, np.maximum(rx * sc, 1e-5), np.maximum(ry * sc, 1e-5), self.n)
+        beyond = e >= rc
+        return np.where(beyond, np.sqrt(x * x + y * y + (e - rc) ** 2), np.where(e > 0, np.maximum(d, e - rc), d))
+
+
+class ZLoft:
+    """Vertical loft (torso): horizontal superellipse sections |x/w|^n + |(y - yc)/d|^n = 1 with separate
+    front and back depth and exponent, varying smoothly with height. stations rows
+    (z, half_width, y_front, y_back, n_front, n_back); rounded caps close the ends."""
+
+    def __init__(self, stations, x0=0.0):
+        st = np.asarray(stations, dtype=np.float64)
+        self.Z, self.V = smooth_table(st[:, 0], st[:, 1:6])
+        self.z0, self.z1 = float(st[0, 0]), float(st[-1, 0])
+        self.x0 = x0
+
+    def bbox(self):
+        w = float(self.V[:, 0].max())
+        return (np.array([self.x0 - w, float(self.V[:, 1].min()), self.z0 - w]),
+                np.array([self.x0 + w, float(self.V[:, 2].max()), self.z1 + w]))
+
+    def eval(self, P):
+        z = P[..., 2]
+        zc = np.clip(z, self.z0, self.z1)
+        w, yf, yb, nf, nb = _interp_cols(zc, self.Z, self.V)
+        yc = 0.5 * (yf + yb)
+        dy = P[..., 1] - yc
+        ry = np.where(dy < 0, yc - yf, yb - yc)
+        n = np.where(dy < 0, nf, nb)
+        e = np.where(z < self.z0, self.z0 - z, np.where(z > self.z1, z - self.z1, 0.0))
+        rc = np.minimum(w, ry)
+        sc = np.sqrt(np.clip(1.0 - (e / rc) ** 2, 0.0, 1.0))
+        x = P[..., 0] - self.x0
+        d = _superellipse_distance(x, dy, np.maximum(w * sc, 1e-5), np.maximum(ry * sc, 1e-5), n)
+        beyond = e >= rc
+        return np.where(beyond, np.sqrt(x * x + dy * dy + (e - rc) ** 2), np.where(e > 0, np.maximum(d, e - rc), d))
+
+
+# ---------------------------------------------------------------------------
 # field
 # ---------------------------------------------------------------------------
 class Field:

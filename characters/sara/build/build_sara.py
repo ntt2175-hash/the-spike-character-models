@@ -62,6 +62,31 @@ def skin(obj, bones, names, power=4.0, relax=3, bias=None, post=None):
     W.apply_to_object(obj, names_, w)
 
 
+def skin_body(obj, bones, power=4.0, relax=3):
+    """Part-aware skinning: membership in torso / arm / leg parts first (from the proportion master's
+    distance fields), then distance-to-bone weights inside each part."""
+    P = verts_of(obj)
+    m = body.master(bones)
+    gnames, M = m.part_weights(P)
+    groups = m.part_groups()
+    acc = {}
+    for j, g in enumerate(gnames):
+        sel = M[:, j] > 1e-3
+        if not sel.any():
+            continue
+        bnames = [b for b in groups[g][1] if b in bones]
+        names_, w = W.compute(P[sel], segs(bones, bnames), power=power)
+        for k, n in enumerate(names_):
+            acc.setdefault(n, np.zeros(len(P)))[sel] += w[:, k] * M[sel, j]
+    names_ = list(acc)
+    w = np.stack([acc[n] for n in names_], axis=1)
+    w /= np.maximum(w.sum(axis=1, keepdims=True), 1e-9)
+    if relax:
+        w = W.relax(w, faces_of(obj), len(P), iterations=relax, factor=0.5)
+    w = W.limit(w, 4)
+    W.apply_to_object(obj, names_, w)
+
+
 def bind(obj, rig):
     obj.parent = rig
     mods = list(obj.modifiers)
@@ -143,6 +168,10 @@ def cut_surface(obj, keeps, snap_iters=4):
         Q = np.where(ok[:, None], Q - g * step, Q)
         for v, q in zip(bverts, Q):
             v.co = q
+    # Snapping can collapse sliver faces at the cut; zero-area faces give undefined normals, which the
+    # thickness pass would turn into long spikes.
+    bmesh.ops.dissolve_degenerate(bm, dist=2e-5, edges=bm.edges[:])
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
     bm.to_mesh(obj.data)
     bm.free()
 
@@ -152,7 +181,9 @@ def thicken(obj, thickness):
     m.thickness = thickness
     m.offset = -1.0
     m.use_rim = True
-    m.use_even_offset = True
+    # Plain offset: every vertex moves exactly `thickness` along its normal. Even offset divides by the
+    # angle between face normals and exploded into spikes at sharp cut corners.
+    m.use_even_offset = False
     m.use_quality_normals = True
     common.apply_modifiers(obj)
     common.shade_smooth(obj)
@@ -173,7 +204,8 @@ def cull_covered_skin(body_obj, jersey_solid, shorts_solid, bones, margin=0.012)
     """Delete body faces fully hidden under tight garments (standard game practice: no z-fighting,
     fewer triangles). A margin is kept at every opening so lifted hems never reveal a gap."""
     P = verts_of(body_obj)
-    in_jersey = (jersey_solid.sample_at(P) < -0.004) & (keep_distance(P, G.jersey_keep()) < -margin) & (P[:, 2] > 0.93)
+    hem_z = body.landmarks(bones)["hem_z"]
+    in_jersey = (jersey_solid.sample_at(P) < -0.004) & (keep_distance(P, G.jersey_keep(bones)) < -margin) & (P[:, 2] > hem_z)
     shorts_keeps, _ = G.shorts_keep(bones)
     in_shorts = (shorts_solid.sample_at(P) < -0.002) & (keep_distance(P, shorts_keeps) < -margin)
     hidden = in_jersey | in_shorts
@@ -230,7 +262,7 @@ def main(out_dir: Path, tex_cache: Path | None):
                                      location=tuple(info["tie"]))
     tie_obj = bpy.context.active_object
     tie_obj.name = "sara_hairtie_LOD0"
-    ax = Vector(bones["hair_ponytail_A_01"]["tail"]) - Vector(bones["hair_ponytail_A_01"]["head"])
+    ax = Vector(tuple(info["tie_axis"]))
     tie_obj.rotation_mode = "QUATERNION"
     tie_obj.rotation_quaternion = ax.to_track_quat("Z", "Y")
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
@@ -254,10 +286,10 @@ def main(out_dir: Path, tex_cache: Path | None):
         clip_objs.append(o)
     # --- garments ---------------------------------------------------------------------------
     jersey_solid = G.jersey_field(bones)
-    jersey = garment("sara_jersey_LOD0", jersey_solid, G.jersey_keep(), 9000, 0.0028)
+    jersey = garment("sara_jersey_LOD0", jersey_solid, G.jersey_keep(bones), 9000, 0.0022)
     shorts_solid = G.shorts_field(bones)
     shorts_keeps, _ = G.shorts_keep(bones)
-    shorts = garment("sara_shorts_LOD0", shorts_solid, shorts_keeps, 5000, 0.0025)
+    shorts = garment("sara_shorts_LOD0", shorts_solid, shorts_keeps, 5000, 0.002)
     cull_covered_skin(body_obj, jersey_solid, shorts_solid, bones)
     pads, bands, socks = {}, [], {}
     for side in ("Left", "Right"):
@@ -285,6 +317,7 @@ def main(out_dir: Path, tex_cache: Path | None):
     eye_pal = dict(character["face"]["eye_shader"])
     for k in ("iris_top", "iris_mid", "iris_bottom", "iris_ring", "iris_cog", "pupil"):
         eye_pal[k] = pal[k]
+    UP.configure(bones)
     painters = {
         "face": lambda p: head.paint_face(p),
         "white": lambda p: head.paint_eye_white(p),
@@ -303,7 +336,7 @@ def main(out_dir: Path, tex_cache: Path | None):
     # --- UVs / attributes -----------------------------------------------------------------------
     cylindrical_uv(jersey, UP.JERSEY_Y0, UP.JERSEY_Z0, UP.JERSEY_Z1)
     cylindrical_uv(shorts, UP.SHORTS_Y0, UP.SHORTS_Z0, UP.SHORTS_Z1)
-    cuts = G.jersey_cuts()
+    cuts = G.jersey_cuts(bones)
     trim_attribute(jersey, cuts["neck"] + cuts["arm_L"] + cuts["arm_R"] + cuts["hem"])
 
     # --- materials -------------------------------------------------------------------------------
@@ -372,18 +405,19 @@ def main(out_dir: Path, tex_cache: Path | None):
 
     # --- weights + binding ----------------------------------------------------------------------
     t1 = time.time()
-    skin(body_obj, bones, body_bones)
+    skin_body(body_obj, bones)
     for side, h in hands.items():
         fingers = [n for n in bones if n.startswith(side) and any(f in n for f in ("Thumb", "Index", "Middle", "Ring", "Little"))]
         skin(h, bones, [f"{side}Hand", f"{side}LowerArmTwist", f"{side}LowerArm"] + fingers, power=6.0, relax=1)
     for obj in [face_obj, cap_obj, tie_obj] + clip_objs + list(ears) + list(decals.values()):
         W.apply_to_object(obj, ["Head"], np.ones((len(obj.data.vertices), 1)))
-    assemble.hair_weights(hair_obj, hair_arrays, bones)
-    assemble.hair_weights(ribbon_obj, ribbon_arrays, bones)
+    assemble.hair_weights(hair_obj, hair_arrays, bones, info["free"]["hair"])
+    assemble.hair_weights(ribbon_obj, ribbon_arrays, bones, info["free"]["ribbon"])
     hem_chains = [n for n in bones if n.startswith("cloth_jersey")]
+    hem_z = body.landmarks(bones)["hem_z"]
 
     def hem_fade(P, names_, w):
-        fade = np.clip((1.0 - P[:, 2]) / 0.08, 0.0, 1.0)
+        fade = np.clip((hem_z + 0.07 - P[:, 2]) / 0.08, 0.0, 1.0)   # hem chains act only near the hem
         for j, n in enumerate(names_):
             if n.startswith("cloth_"):
                 w[:, j] *= fade

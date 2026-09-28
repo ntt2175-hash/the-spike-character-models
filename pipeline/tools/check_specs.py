@@ -26,7 +26,7 @@ SEQUENCE_PHASES = {"cinematic_transition", "character_reveal", "character_motion
                    "action_transition", "return_to_gameplay"}
 SEQUENCE_EVENTS = {"gameplay_freeze", "action_resolved", "gameplay_resume"}
 CAMERA_MODES = {"gameplay", "gameplay_push", "gameplay_follow"}
-ANCHOR_ALIASES = {"eyes", "feet", "hit_hand", "aim_hand"}
+ANCHOR_ALIASES = {"eyes", "feet", "hit_hand", "aim_hand", "body_center"}
 GAZE_TARGETS = {"camera", "ball", "forward", "none"}
 SPRING_RANGES = {"stiffness": (0.0, 4.0), "drag": (0.0, 1.0), "gravity": (0.0, 2.0), "radius": (0.0, 0.1),
                  "wind_response": (0.0, 2.0)}
@@ -285,6 +285,8 @@ def check_character(char_id: str, specs: dict, ctx: dict, r: Report):
         for k, (lo, hi) in SPRING_RANGES.items():
             if k in ch and not lo <= ch[k] <= hi:
                 r.err(where, f"chain {ch['id']} {k}={ch[k]} outside [{lo}, {hi}]")
+        if ch.get("points") and len(ch["points"]) != ch["bones"] + 1:
+            r.err(where, f"chain {ch['id']} has {len(ch['points'])} points for {ch['bones']} bones (needs bones + 1)")
         if ch.get("keep_at_lod2") and not ch.get("keep_at_lod1", True):
             r.err(where, f"chain {ch['id']} kept at LOD2 but not LOD1")
     for col in c.get("secondary_chains", {}).get("colliders", []):
@@ -309,6 +311,19 @@ def check_character(char_id: str, specs: dict, ctx: dict, r: Report):
         r.err(where, f"proportions: {exc}")
     if not 1.3 <= p["height_m"] <= 2.1:
         r.err(where, "height_m outside 1.3..2.1 m")
+    body_spec = specs.get("body", {})
+    for k, v in p.items():
+        rng = body_spec.get("skeleton_params", {}).get(k, {}).get("range")
+        if rng and isinstance(v, (int, float)) and not rng[0] <= v <= rng[1]:
+            r.err(where, f"proportions.{k}={v} outside {rng}")
+    shape_params = body_spec.get("shape_params", {})
+    for k, v in c.get("body_shape", {}).items():
+        if k == "note":
+            continue
+        if k not in shape_params:
+            r.err(where, f"body_shape.{k} is not a body master parameter")
+        elif not shape_params[k]["range"][0] <= v <= shape_params[k]["range"][1]:
+            r.err(where, f"body_shape.{k}={v} outside {shape_params[k]['range']}")
 
     # Face / expressions
     shape_set = ctx["shapes"]

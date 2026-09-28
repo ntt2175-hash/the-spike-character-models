@@ -133,6 +133,12 @@ def resolve_anchor(obj, anchor: str, character: dict) -> Vector:
         p = (pose_bone_world_head(obj, "LeftToes") + pose_bone_world_head(obj, "RightToes")) * 0.5
         p.z = obj.matrix_world.translation.z
         return p
+    if anchor == "body_center":
+        # Half the character height above the floor, under the hips: full-body framing that does not
+        # depend on the character's leg/torso proportions.
+        p = pose_bone_world_head(obj, "Hips")
+        p.z = obj.matrix_world.translation.z + 0.5 * character["proportions"]["height_m"]
+        return p
     if anchor in ("hit_hand", "aim_hand"):
         hit = "socket_ball_R" if handed == "right" else "socket_ball_L"
         aim = "socket_ball_L" if handed == "right" else "socket_ball_R"

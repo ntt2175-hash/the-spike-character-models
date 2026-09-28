@@ -50,3 +50,51 @@ def render_shots(rig, character, out_dir, tiles, prefix=""):
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     log("rendered", len(manifest), "to", out)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Test B (volume): gray clay. The model must read as a professional sculpt before hair, textures and
+# toon lighting. Views: front, side, 3/4 (primary), rear 3/4, rear, low angle, torso close-up.
+# ---------------------------------------------------------------------------
+def _free(yaw, pitch, fl, fh, anchor="body_center"):
+    return {"anchor": anchor, "anchor_offset": [0, 0, 0], "yaw_deg": yaw, "pitch_deg": pitch, "roll_deg": 0,
+            "focal_length_mm": fl, "frame_height_rel": fh, "screen_offset": [0, 0], "move": {"type": "static"}}
+
+
+def clay_tiles(label="clay"):
+    return [("qc_front", "lookdev_neutral", (600, 1000), f"{label} front"),
+            ("qc_side", "lookdev_neutral", (600, 1000), f"{label} side"),
+            (_free(35, 5, 50, 1.15), "lookdev_neutral", (600, 1000), f"{label} 3/4 (primary test)"),
+            (_free(145, 4, 50, 1.15), "lookdev_neutral", (600, 1000), f"{label} rear 3/4"),
+            ("qc_rear", "lookdev_neutral", (600, 1000), f"{label} rear"),
+            (_free(30, -18, 35, 1.2), "lookdev_neutral", (600, 1000), f"{label} low angle"),
+            (_free(35, 2, 60, 0.42, "Chest"), "lookdev_neutral", (800, 900), f"{label} torso close-up 3/4")]
+
+
+def clay(hide=()):
+    """Neutral clay on every mesh; outlines and painted eye decals off; objects matching `hide` hidden."""
+    mat = bpy.data.materials.new("M_qc_clay")
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    bsdf.inputs["Base Color"].default_value = (0.62, 0.6, 0.58, 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.55
+    for o in bpy.data.objects:
+        if o.type != "MESH":
+            continue
+        n = o.name.lower()
+        if "_eye_" in n or "_lash_" in n or any(h in n for h in hide):
+            o.hide_render = True
+            continue
+        for m in o.modifiers:
+            if m.type == "SOLIDIFY" and m.name == "spike_outline":
+                m.show_render = False
+        o.data.materials.clear()
+        o.data.materials.append(mat)
+    scene = bpy.context.scene
+    world = scene.world or bpy.data.worlds.new("qc_world")
+    scene.world = world
+    world.use_nodes = True
+    bg = world.node_tree.nodes["Background"]
+    bg.inputs["Color"].default_value = (0.32, 0.33, 0.36, 1.0)
+    bg.inputs["Strength"].default_value = 0.6
+    return mat

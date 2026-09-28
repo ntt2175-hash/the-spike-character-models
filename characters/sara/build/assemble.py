@@ -39,18 +39,18 @@ def angel_ring(verts, normals, lock_id, along, tags, seed=4):
     """Stylized angel ring: a band around the crown, lower at the front, with a jagged lower edge and a
     few breaks where locks separate; plus a band high on the ponytail. Outward-facing surfaces only."""
     rng = np.random.default_rng(seed)
-    c = np.array([0.0, 0.012, 1.55])
+    c = hairmod.C
     radial = verts - c
     radial[:, 2] *= 0.6
     radial /= np.linalg.norm(radial, axis=1, keepdims=True)
     facing = np.clip((normals * radial).sum(axis=1), 0, 1)
     ang = np.arctan2(verts[:, 0], -(verts[:, 1] - c[1]))
-    z_c = 1.629 + 0.012 * (1.0 - np.cos(ang)) * 0.5
+    z_c = hairmod.EYE_Z + 0.074 * hairmod.HS + 0.012 * (1.0 - np.cos(ang)) * 0.5
     jag = 0.0035 * np.sin(ang * 23.0) + 0.0022 * np.sin(ang * 41.0 + 1.3)
     dz = verts[:, 2] - z_c
-    band = np.where(dz > 0, np.exp(-(dz ** 2) / (2 * 0.0048 ** 2)), np.exp(-((dz - jag) ** 2) / (2 * 0.0036 ** 2)))
+    band = np.where(dz > 0, np.exp(-(dz ** 2) / (2 * 0.0052 ** 2)), np.exp(-((dz - jag) ** 2) / (2 * 0.004 ** 2)))
     breaks = (np.cos(ang * 9.0 + 0.7) > -0.82).astype(float)
-    is_head = np.array([tags[i] in ("top", "bang_A", "bang_B", "bang_C") for i in lock_id])
+    is_head = np.array([tags[i] in ("top", "back", "braid", "bang_A", "bang_B", "bang_C") for i in lock_id])
     hl = band * facing ** 1.5 * breaks * is_head
     is_tail = np.array([tags[i].startswith("ponytail") for i in lock_id])
     tail_band = np.exp(-((along - 0.15) ** 2) / (2 * 0.03 ** 2))
@@ -77,32 +77,43 @@ def build_hair(bones, coll="sara_GAME_LOD0"):
     return hair, ribbon, (hv, hf, ha, hid, hb.tags), (rv, rf, ra, rid, rb.tags), info
 
 
-def hair_weights(obj, arrays, bones):
-    """Each lock follows its own chain (or the Head), blended along the chain."""
+# lock tag -> (chain id, side); tags not listed (top, back, braid, nape) ride the Head.
+CHAIN_FOR = {
+    "ponytail_A": ("hair_ponytail_A", None), "ponytail_B": ("hair_ponytail_B", None),
+    "ponytail_C": ("hair_ponytail_C", None),
+    "bang_A": ("hair_bang_A", None), "bang_B": ("hair_bang_B", None), "bang_C": ("hair_bang_C", None),
+    "side_L": ("hair_side_A", "L"), "side_R": ("hair_side_A", "R"), "sideB_L": ("hair_side_B", "L"),
+    "ahoge_A": ("hair_ahoge_A", None),
+    "flyaway_A": ("hair_flyaway_A", None), "flyaway_B": ("hair_flyaway_B", None), "flyaway_C": ("hair_flyaway_C", None),
+    "ribbon_loop_A": ("ribbon_loop_A", None), "ribbon_tail_A": ("ribbon_tail_A", None),
+    "ribbon_tail_B": ("ribbon_tail_B", None),
+}
+
+
+def hair_weights(obj, arrays, bones, free=None):
+    """Each lock follows its own chain (or the Head), blended in from where it leaves the scalp
+    (free[lock] = the lock's 'along' at its chain root)."""
     verts, faces, along, lock_id, tags = arrays
-    names_all = []
-    Wall = np.zeros((len(verts), 0))
-    chain_for = {
-        "ponytail_A": "hair_ponytail_A", "ponytail_B": "hair_ponytail_B", "ponytail_C": "hair_ponytail_C",
-        "bang_A": "hair_bang_A", "bang_B": "hair_bang_B", "bang_C": "hair_bang_C",
-        "side_L": "hair_side_A", "side_R": "hair_side_A", "ahoge_A": "hair_ahoge_A",
-        "flyaway_A": "hair_flyaway_A", "flyaway_B": "hair_flyaway_B", "flyaway_C": "hair_flyaway_C",
-        "ribbon_loop_A": "ribbon_loop_A", "ribbon_tail_A": "ribbon_tail_A",
-    }
     groups = {}
     for lid, tag in enumerate(tags):
         idx = np.nonzero(lock_id == lid)[0]
-        chain = chain_for.get(tag)
+        chain, side = CHAIN_FOR.get(tag, (None, None))
         segs = [("Head", bones["Head"]["head"], bones["Head"]["tail"])]
         if chain:
-            suffix = "_L" if tag == "side_L" else ("_R" if tag == "side_R" else "")
+            suffix = f"_{side}" if side else ""
             cnames = sorted(n for n in bones if n.startswith(chain + "_") and n.endswith(suffix) and
                             (suffix or not n.endswith(("_L", "_R"))))
             segs += [(n, bones[n]["head"], bones[n]["tail"]) for n in cnames]
         names, w = W.compute(verts[idx], segs, power=3.0)
         if chain:
-            # Roots stay on the head: blend by 'along' so the scalp end never swings.
-            root_k = np.clip(along[idx] / 0.18, 0, 1)[:, None] if not tag.startswith("ponytail") else 1.0
+            # Roots stay on the head: blend in from where the lock leaves the scalp, so it never swings.
+            u0 = free[lid] if free is not None else 0.0
+            if u0 > 0.0:
+                root_k = np.clip((along[idx] - (u0 - 0.08)) / 0.14, 0, 1)[:, None]
+            elif tag.startswith("ponytail"):
+                root_k = 1.0
+            else:
+                root_k = np.clip(along[idx] / 0.18, 0, 1)[:, None]
             w = w * root_k
             w[:, 0] += 1.0 - w.sum(axis=1)
         for j, n in enumerate(names):

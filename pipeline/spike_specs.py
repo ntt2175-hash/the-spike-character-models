@@ -261,6 +261,15 @@ def expand_chain(chain: dict) -> list[dict]:
     direction and world up, giving a natural hanging arc that artists refine.
     """
     names = chain_bone_names(chain)
+    if chain.get("points"):
+        # Designed chains: the bones follow the modeled mass exactly (bones + 1 joint positions).
+        pts = [list(p) for p in chain["points"]]
+        out, parent = [], chain["parent"]
+        for i, name in enumerate(names):
+            out.append({"name": name, "parent": parent, "head": pts[i], "tail": pts[i + 1],
+                        "deform": True, "kind": "secondary"})
+            parent = name
+        return out
     seg_len = chain["length"] / chain["bones"]
     direction = _norm(chain["direction"])
     bend_axis = _cross(direction, [0.0, 0.0, 1.0])
@@ -356,8 +365,14 @@ def apply_proportions(bones: list[dict], proportions: dict) -> list[dict]:
             r = by_name[root]
             leg_ratio = dst[1] / src[1]
 
-            def g(p, r=r, leg_ratio=leg_ratio):
-                return [r["head"][0] * hip_w + (p[0] - r["head"][0]), p[1], p[2] * leg_ratio]
+            ankle_z = by_name["LeftLowerLeg"]["tail"][2]
+            hip_src = r["head"][2]
+            leg_k = (hip_src * leg_ratio - ankle_z) / (hip_src - ankle_z)
+
+            def g(p, r=r, ankle_z=ankle_z, leg_k=leg_k):
+                # Longer legs lengthen the thigh and shin; the ankle and foot keep their anatomical height.
+                z = ankle_z + (p[2] - ankle_z) * leg_k if p[2] >= ankle_z else p[2]
+                return [r["head"][0] * hip_w + (p[0] - r["head"][0]), p[1], z]
             head, tail = g(b["head"]), g(b["tail"])
             if b["name"].endswith(("Foot", "Toes")) or b["name"].startswith("socket_foot"):
                 foot = by_name["LeftFoot" if "Left" in b["name"] or b["name"].endswith("_L") else "RightFoot"]

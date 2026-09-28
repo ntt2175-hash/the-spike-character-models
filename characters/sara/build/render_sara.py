@@ -31,6 +31,19 @@ if tiles_kind == "turnaround":
              ("cu_face", "cinematic_soft", (900, 800), "face 3/4"), (face, "cinematic_soft", (800, 800), "face front"),
              ("hair_detail", "cinematic_soft", (900, 800), "hair back 3/4"), ("ms_waist", "cinematic_soft", (900, 900), "waist-up"),
              ("low_hero", "sp_hero", (900, 1000), "S+ low hero"), ("qc_gameplay", "gameplay_readable", (900, 600), "gameplay distance")]
+elif tiles_kind == "clay":
+    # Test B (volume) on the full costume; the nude proportion study is study_body.py.
+    dev_render.clay()
+    tiles = dev_render.clay_tiles("clay")
+elif tiles_kind == "silhouette":
+    # Transparent film: the alpha channel IS the silhouette (pipeline/tools/silhouette_compare.py).
+    bpy.context.scene.render.film_transparent = True
+    tiles = [("qc_front", "lookdev_neutral", (700, 1000), "front"), ("qc_side", "lookdev_neutral", (700, 1000), "side"),
+             ("qc_rear", "lookdev_neutral", (700, 1000), "rear"), ("qc_34", "lookdev_neutral", (700, 1000), "3/4")]
+    dev_render.render_shots(rig, character, out / "stand", tiles)
+    poses.keyart(rig)
+    tiles = [("keyart_match", "lookdev_neutral", (594, 1346), "key-art match")]
+    out = out / "keyart"
 elif tiles_kind == "keyart":
     tiles = [("keyart_match", "lookdev_neutral", (594, 1346), "key-art match"),
              ("keyart_match", "sp_hero", (594, 1346), "key-art match (S+ light)"),
