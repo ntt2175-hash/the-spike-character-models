@@ -1,7 +1,9 @@
 """Sara: uniform, legwear and shoes as real garments (shells with thickness), not paint.
 
-Jersey : sleeveless cap-shoulder cut, deep armholes, crew neck with a slight front scoop, hem at the
-         upper hip. Follows the slender body with light ease; never a wide rectangular block.
+Jersey : (front reference sara_jersey_front.png) sleeveless, narrow straps, a V-neck with a modeled white
+         trim and navy piping, navy armhole bindings, white side panels with modeled navy seam piping,
+         hem just below the hip joints. Follows the body (bust, a slight waist) and hangs as a clean A-line
+         over the hips; never a wide rectangular block.
 Shorts : fitted, short inseam, leg openings slightly higher on the outer side.
 Pads   : sleeve knee pads, thick padded front, blue elastic bands at both edges.
 Legwear: LEFT black knee-high (top hidden under the pad); RIGHT low ankle sock.
@@ -32,27 +34,135 @@ def _bone(bones, n):
 # ---------------------------------------------------------------------------
 # cut shapes (also used to paint trims by proximity)
 # ---------------------------------------------------------------------------
+def jersey_canvas(lm):
+    """Vertical extent (z0, z1) of the jersey print canvas (uniform_paint) from the body landmarks."""
+    return lm["hem_z"] - 0.07, lm["neck_z"] + 0.083
+
+
+def side_seam_u(z, lm):
+    """Front-panel / side-panel seam as a print-canvas offset from the front center (1000 = one full turn)
+    at height z: the seam follows the body, in at the waist and out toward the hem and the armpit. Shared
+    by the painted panels and the modeled seam piping, so paint and geometry always agree."""
+    z0, z1 = jersey_canvas(lm)
+    k = (z1 - z0) * 1000.0 / 570.0
+    yy = (430.0 * k - (np.asarray(z, dtype=np.float64) - z0) * 1000.0) / k
+    return 205.0 + 0.00018 * yy ** 2
+
+
+class VNeck:
+    """V-neck opening (front reference): straight edges from the shoulder-neck junction down to a point just
+    below the collarbones, joined to a round back / side neckline. Removal region < 0."""
+
+    def __init__(self, zb, x1, z1, y_front, back):
+        self.zb, self.m = zb, x1 / (z1 - zb)
+        self.norm = math.sqrt(1.0 + 1.0 / self.m ** 2)
+        self.y_front, self.back = y_front, back
+
+    def bbox(self):
+        return None
+
+    def eval(self, P):
+        x, y, z = P[..., 0], P[..., 1], P[..., 2]
+        dv = np.maximum((self.zb + np.abs(x) / self.m - z) / self.norm, y - self.y_front)
+        return np.minimum(dv, self.back.eval(P))
+
+
+class Offset:
+    """prim grown by d (eval - d): 'within d of the prim'."""
+
+    def __init__(self, prim, d):
+        self.prim, self.d = prim, d
+
+    def bbox(self):
+        return None
+
+    def eval(self, P):
+        return self.prim.eval(P) - self.d
+
+
+class SeamBand:
+    """A narrow band around the torso-side seam on one side (sx), between two heights."""
+
+    def __init__(self, lm, sx, half_w, z0, z1, y0=0.0):
+        self.lm, self.sx, self.hw, self.z0, self.z1, self.y0 = lm, sx, half_w, z0, z1, y0
+
+    def bbox(self):
+        return None
+
+    def eval(self, P):
+        x, y, z = P[..., 0], P[..., 1] - self.y0, P[..., 2]
+        ang = np.arctan2(x, -y)
+        target = self.sx * side_seam_u(z, self.lm) / 1000.0 * 2.0 * math.pi
+        r = np.sqrt(x * x + y * y)
+        d = np.abs(ang - target) * r - self.hw
+        return np.maximum(d, np.maximum(self.z0 - z, z - self.z1))
+
+
 def jersey_cuts(bones):
     lm = bodymod.landmarks(bones)
     sc, kt, nz = lm["s"], lm["kt"], lm["neck_z"]
-    ax, az = lm["shoulder_x"] + 0.021 * sc, lm["shoulder_z"] - 0.082 * sc * kt
+    # Narrow straps (front reference): the armholes reach further in than a tank top's.
+    ax, az = lm["shoulder_x"] + 0.016 * sc, lm["shoulder_z"] - 0.082 * sc * kt
+    back_neck = sdf.Ellipsoid(_v(0.0, -0.012 * sc, nz + 0.058 * sc), _v(0.058, 0.085 * lm["torso_half_depth"] / (0.086 * sc), 0.07) * sc,
+                              sdf.rotation_to(_v(0.0, 0.42, 1.0)))
     return {
-        # Crew neck that dips at the front: one tilted opening, so the edge is a single clean line.
-        "neck": [sdf.Ellipsoid(_v(0.0, -0.012 * sc, nz + 0.058 * sc), _v(0.058, 0.085 * lm["torso_half_depth"] / (0.086 * sc), 0.07) * sc,
-                               sdf.rotation_to(_v(0.0, 0.42, 1.0)))],
-        "arm_L": [sdf.Ellipsoid(_v(ax, 0.004, az), _v(0.07, 0.1, 0.1 * kt) * sc, sdf.rotation_to(_v(0.25, 0.0, 1.0)))],
-        "arm_R": [sdf.Ellipsoid(_v(-ax, 0.004, az), _v(0.07, 0.1, 0.1 * kt) * sc, sdf.rotation_to(_v(-0.25, 0.0, 1.0)))],
-        # Hem at the upper hip (key art): the shorts show below it; a touch lower at the back.
+        # V-neck: the point sits just below the collarbones; the back neckline stays round and higher.
+        "neck": [VNeck(nz - 0.05 * sc, 0.052 * sc, nz + 0.03 * sc, -0.015 * sc, back_neck)],
+        "arm_L": [sdf.Ellipsoid(_v(ax, 0.004, az), _v(0.076, 0.1, 0.1 * kt) * sc, sdf.rotation_to(_v(0.25, 0.0, 1.0)))],
+        "arm_R": [sdf.Ellipsoid(_v(-ax, 0.004, az), _v(0.076, 0.1, 0.1 * kt) * sc, sdf.rotation_to(_v(-0.25, 0.0, 1.0)))],
+        # Hem just below the hip joints (front reference): the shorts show below it; a touch lower at the back.
         "hem": [sdf.HalfSpace(_v(0.0, 0.0, lm["hem_z"]), _v(0.0, 0.1, -1.0))],
     }
+
+
+def jersey_trims(bones, jersey_thickness=0.0022):
+    """The jersey's real garment edges and seams (front reference), as thin shells on its outer surface:
+    [(name, keep cuts, grow, thickness, material key)]. The solid is jersey_field grown by `grow`."""
+    lm = bodymod.landmarks(bones)
+    cuts = jersey_cuts(bones)
+    neck, hem = cuts["neck"][0], cuts["hem"][0]
+    on = jersey_thickness + 0.0003
+    out = [
+        # V-neck trim: a white band with a navy piping line along its outer edge.
+        ("neck_trim", [("remove", neck), ("keep", Offset(neck, 0.0085))], on, 0.0015, "trim_white"),
+        ("neck_piping", [("remove", Offset(neck, 0.0085)), ("keep", Offset(neck, 0.011))], on + 0.0002, 0.0012, "piping"),
+    ]
+    for side in ("L", "R"):
+        arm = cuts[f"arm_{side}"][0]
+        # Armhole binding: a slim navy edge (the strap stays light).
+        out.append((f"arm_binding_{side}", [("remove", arm), ("keep", Offset(arm, 0.0055)), ("remove", neck)], on, 0.0014, "piping"))
+        # Side-panel seam piping: from the hem up into the armhole.
+        sx = 1.0 if side == "L" else -1.0
+        band = SeamBand(lm, sx, 0.0021, lm["hem_z"] - 0.02, lm["shoulder_z"])
+        out.append((f"seam_piping_{side}", [("keep", band), ("remove", arm), ("keep", hem)], on, 0.0011, "piping"))
+    return out
+
+
+def _hip_extents(bones, z0, z1, voxel=0.004):
+    """Per-height outer extents of the body below the waist (torso + legs): (z, max |x|, min y, max y)."""
+    m = bodymod.master(bones)
+    f = m.body_field(voxel, include=("torso", "legs"), bmin=(-0.25, -0.2, z0), bmax=(0.25, 0.2, z1))
+    solid = f.d < 0
+    out = []
+    xs = f.origin[0] + np.arange(f.shape[0]) * f.voxel
+    ys = f.origin[1] + np.arange(f.shape[1]) * f.voxel
+    for k in range(f.shape[2]):
+        sl = solid[:, :, k]
+        if not sl.any():
+            continue
+        ix, iy = np.nonzero(sl)
+        out.append((f.origin[2] + k * f.voxel, float(np.abs(xs[ix]).max()), float(ys[iy].min()), float(ys[iy].max())))
+    return np.asarray(out)
 
 
 def jersey_field(bones, voxel=0.0022):
     """Closed solid of the jersey's outer surface; openings are cut afterwards (jersey_keep).
 
-    Built from Sara's own torso sections: close over the shoulders and upper chest, then the fabric
-    HANGS - the front falls from the chest (not following the waist back in), the back from the
-    shoulder blades, the sides from the rib cage with a slight flare at the hem. Never a rectangular block.
+    Built from Sara's own torso sections (front reference: a clean jersey that follows the body): close
+    over the shoulders and the chest, then the fabric HANGS - the front falls from the bust (not following
+    the waist back in), the back from the shoulder blades, the sides come in a little at the waist and flare
+    over the hips into the hem. Below the waist it clears the measured hip / thigh extents (plus the shorts
+    under it), so nothing ever pokes through. Never a rectangular block.
     """
     m = bodymod.master(bones)
     lm = m.lm
@@ -61,10 +171,13 @@ def jersey_field(bones, voxel=0.0022):
     z_apex, y_apex = m.bust_apex()
     z_scap = m.tz(0.72)
     hem = lm["hem_z"]
+    waist = lm["waist_z"]
     i_chest = int(np.argmin(np.abs(rows[:, 0] - m.tz(0.75))))
     w_chest = rows[i_chest, 1]
+    ext = _hip_extents(bones, hem - 0.05 * sc, waist)
+    ease = 0.013 * sc                                  # shorts (fit + thickness) + the jersey's own ease
     drape = []
-    zs = np.linspace(hem - 0.03 * sc, m.tz(0.93), 22)
+    zs = np.linspace(hem - 0.03 * sc, m.tz(0.93), 26)
     for z in zs:
         w, yf, yb, nf, nb = [float(np.interp(z, rows[:, 0], rows[:, j])) for j in range(1, 6)]
         below = max(0.0, z_apex - z)
@@ -72,25 +185,22 @@ def jersey_field(bones, voxel=0.0022):
         yf_j = min(yf - 0.007 * sc, hang_f) if z < z_apex else yf - 0.007 * sc
         yb_j = max(yb + 0.007 * sc, float(np.interp(z_scap, rows[:, 0], rows[:, 3])) + 0.004 * sc - 0.06 * max(0.0, z_scap - z))
         k_hem = 1.0 - min(1.0, (z - hem) / (0.12 * sc)) if z > hem else 1.0
-        w_j = max(w + 0.007 * sc, (w_chest - 0.006 * sc + 0.014 * sc * k_hem) if z < m.tz(0.75) else w + 0.007 * sc)   # A-line flare
-        drape.append((z, w_j, yf_j, yb_j, 2.1, 2.2))
-    f = sdf.Field(_v(-0.2, -0.18, hem - 0.09), _v(0.2, 0.16, lm["neck_z"] + 0.1), voxel)
+        w_side = w_chest - 0.006 * sc + 0.014 * sc * k_hem                     # A-line flare toward the hem
+        w_side -= 0.007 * sc * math.exp(-((z - waist) / (0.05 * sc)) ** 2)      # slight waist shaping
+        w_j = max(w + 0.007 * sc, w_side) if z < m.tz(0.75) else w + 0.007 * sc
+        n_f = 2.1
+        if z < waist and len(ext):
+            ex, ey0, ey1 = (float(np.interp(z, ext[:, 0], ext[:, j])) for j in (1, 2, 3))
+            w_j = max(w_j, ex + ease)
+            yf_j = min(yf_j, ey0 - ease)
+            yb_j = max(yb_j, ey1 + ease)
+            n_f = 2.1 + 0.5 * min(1.0, (waist - z) / (0.1 * sc))            # squarer over the hips: covers the thighs
+        drape.append((z, w_j, yf_j, yb_j, n_f, 2.2 + 0.4 * (n_f - 2.1)))
+    f = sdf.Field(_v(-0.22, -0.18, hem - 0.09), _v(0.22, 0.17, lm["neck_z"] + 0.1), voxel)
     for prim, k in bodymod.torso_parts(bones):
         f.union(prim, k)
     f.offset(0.007)
     f.union(sdf.ZLoft(drape), 0.03 * sc)
-    shorts_outer = f.copy()
-    shorts_outer.d[:] = sdf.BIG
-    shorts_outer.union(bodymod.torso_parts(bones)[0][0], 0.0)          # the torso loft, below the waistband
-    shorts_outer.intersect(sdf.HalfSpace(_v(0.0, 0.0, lm["waistband_z"] + 0.02 * sc), _v(0.0, 0.0, 1.0)), 0.02 * sc)
-    shorts_outer.offset(0.012)
-    # The hem falls just below the hip joints (front reference): cover the tops of the thighs (and the
-    # shorts on them) so nothing pokes through where the pelvis narrows into the crotch.
-    tt = m.p["thigh_thickness"]
-    for side in ("Left", "Right"):
-        hip, knee = _bone(bones, f"{side}UpperLeg")
-        shorts_outer.union(sdf.RoundCone(hip + _v(0, 0, 0.02), hip + (knee - hip) * 0.22, 0.1 * tt * sc, 0.094 * tt * sc), 0.04 * sc)
-    f.union_field(shorts_outer, 0.02 * sc)
     f.drape(0.003 * sc, grow=0.0006 * sc)         # fabric bridges small creases (armpit, sternum, spine)
     return f
 

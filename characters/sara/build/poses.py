@@ -73,10 +73,10 @@ def stand(rig):
     aim(rig, "UpperChest", (-0.015, -0.01, 1.0), twist_deg=-3)
     # Standing leg under the body; free leg relaxed forward-out with a soft knee.
     # Thighs angle in toward the knees (never parallel tubes): a long tapering leg line.
-    aim(rig, "LeftUpperLeg", (-0.085, -0.01, -1.0))
+    aim(rig, "LeftUpperLeg", (-0.05, -0.01, -1.0))
     aim(rig, "LeftLowerLeg", (0.01, 0.035, -1.0))
     aim(rig, "LeftFoot", (0.1, -0.72, -0.3))
-    aim(rig, "RightUpperLeg", (0.05, -0.14, -1.0))
+    aim(rig, "RightUpperLeg", (0.03, -0.12, -1.0))
     aim(rig, "RightLowerLeg", (-0.05, 0.16, -1.0))
     aim(rig, "RightFoot", (-0.25, -0.7, -0.26))
     for side, s in (("Left", 1.0), ("Right", -1.0)):
@@ -156,3 +156,23 @@ def portrait(rig):
     aim(rig, "Neck", (0.03, -0.04, 1.0))
     aim(rig, "Head", (0.1, -0.04, 1.0), twist_deg=-16)
     ground(rig, "Left")
+
+
+def lean_closeup(rig):
+    """The cut-in close-up (reference: the windy face shot): bent forward into a ready stance, her right
+    shoulder rolled toward the camera, the head tipped back to look up into the lens with a slight tilt
+    toward her right. The hair is NOT posed here: hair_sim simulates it in the wind."""
+    reset(rig)
+    aim(rig, "Spine", (0.0, -0.42, 0.9))
+    aim(rig, "Chest", (0.02, -0.5, 0.86))
+    aim(rig, "UpperChest", (0.03, -0.44, 0.9), twist_deg=-10)
+    aim(rig, "RightShoulder", (-0.9, -0.32, 0.28))
+    aim(rig, "LeftShoulder", (0.95, -0.1, 0.12))
+    aim(rig, "RightUpperArm", (-0.22, -0.6, -0.77))
+    aim(rig, "RightLowerArm", (0.08, -0.7, -0.71))
+    aim(rig, "LeftUpperArm", (0.3, -0.4, -0.86))
+    aim(rig, "LeftLowerArm", (0.02, -0.6, -0.8))
+    aim(rig, "Neck", (-0.02, -0.12, 0.99))
+    aim(rig, "Head", (-0.12, 0.3, 0.95), twist_deg=6)
+    for side in ("Left", "Right"):
+        curl_fingers(rig, side, 22, thumb_deg=8)

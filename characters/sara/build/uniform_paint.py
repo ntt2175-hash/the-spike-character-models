@@ -17,6 +17,7 @@ FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 SCRIPT_FONT = "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"   # team wordmark
 JERSEY_Y0, JERSEY_Z0, JERSEY_Z1 = 0.0, 0.86, 1.43
 CHEST_Z = 1.2
+_LM = {}
 SHORTS_Y0, SHORTS_Z0, SHORTS_Z1 = 0.005, 0.74, 1.02
 _REF_JERSEY_MM = 570.0        # print layout below is authored for a 570 mm jersey panel
 
@@ -25,8 +26,11 @@ def configure(bones):
     """Place the print canvases from the body landmarks (the prints follow the proportions)."""
     global JERSEY_Z0, JERSEY_Z1, SHORTS_Z0, SHORTS_Z1, CHEST_Z
     import body
+    import garments as G
     lm = body.landmarks(bones)
-    JERSEY_Z0, JERSEY_Z1 = lm["hem_z"] - 0.07, lm["neck_z"] + 0.083
+    _LM.clear()
+    _LM.update(lm)
+    JERSEY_Z0, JERSEY_Z1 = G.jersey_canvas(lm)
     CHEST_Z = body.master(bones).bust_apex()[0]
     SHORTS_Z0, SHORTS_Z1 = lm["hip_z"] - 0.14, lm["hip_z"] + 0.14
 
@@ -37,75 +41,86 @@ def cyl_uv(p, y0, z0, z1):
 
 
 def paint_jersey(path, pal, px=2048):
-    """Canvas units: u * 1000 horizontally, height in mm vertically (570 mm)."""
+    """Sara's jersey print (front reference sara_jersey_front.png). Canvas: x = u * 1000 around the torso
+    (500 = front center, > 500 = her left), y = mm above JERSEY_Z0. Everything is placed from the body's
+    own landmarks (bust apex, waist, hem), so the print sits on the forms as in the art:
+      navy upper front -> gradient to pale cyan below the bust | weasels wordmark over the upper bust |
+      a large 2 just below the bust apex | round crest at her left strap | white sweeping arcs, sparkles
+      and a halftone on the lower front | white-to-light-blue side panels (seam = side_seam_u, the same
+      curve as the modeled piping) | back number between the shoulder blades | a fine mesh weave."""
+    import garments as G
     H = (JERSEY_Z1 - JERSEY_Z0) * 1000
     k = H / _REF_JERSEY_MM
+    Y = lambda z: (z - JERSEY_Z0) * 1000.0  # noqa: E731
     c = paint.Canvas(1000, H, px, (0, 0), supersample=2, background=(*paint.hex_rgb(pal["jersey_front_top"]), 1.0))
-    # Front/back body: vertical gradient, navy through the chest print to pale cyan at the hem (front
-    # reference: the lower third of the front is light), the back darker.
-    cz = (CHEST_Z - JERSEY_Z0) * 1000
-    grad_front = c.vertical_gradient(cz - 105 * k, 95, pal["jersey_front_top"], pal["jersey_front_bottom"])
-    grad_back = c.vertical_gradient(430 * k, 60 * k, "#1c3050", "#5f8aa8")
-    X, Y = c.grid_mm()
-    front = ((X > 300) & (X < 700)).astype(np.float32)
-    c.paint(np.ones_like(front), grad_back, 1.0)
-    c.paint(front, grad_front, 1.0)
-    # White side panels: armpit to hem, flaring slightly toward the hem; royal-blue piping on the front seam.
-    for side in (-1, 1):
-        def edge(y, inner):
-            base = 500 + side * (205 if inner else 305)
-            yy = (430 * k - y) / k
-            return base + side * (0.00018 * yy ** 2 if inner else -0.00008 * yy ** 2)
-        ys = np.linspace(-5, H + 5, 40)
-        inner = [(edge(y, True), y) for y in ys]
-        outer = [(edge(y, False), y) for y in ys[::-1]]
-        c.paint(c.mask_polygon(inner + outer, blur_mm=0.4), pal["jersey_side"], 1.0)
-        c.paint(c.mask_stroke(inner[::3], [4.5] * len(inner[::3]), blur_mm=0.3), pal["jersey_piping"], 1.0)
-    # Wind-swirl print on the lower front: long streams sweeping up toward her left side, curling
-    # into a couple of open spirals (canvas x units are ~0.8 mm, y units are mm).
-    rng = np.random.default_rng(12)
+    X, Yg = c.grid_mm()
+    zc = JERSEY_Z0 + Yg / 1000.0
+    seam = G.side_seam_u(zc, _LM)
+    front = (np.abs(X - 500) < seam).astype(np.float32)
+    # Base colors: back (darker) everywhere, front gradient navy -> mid blue -> pale cyan -> near white.
+    c.paint(np.ones_like(front), c.vertical_gradient(Y(_LM["chest_z"]), Y(_LM["hem_z"]), "#1a2e55", "#4c7aa3"), 1.0)
+    top, mid, low, hem = pal["jersey_front_top"], "#3f7fb0", pal["jersey_front_bottom"], "#d4ecf7"
+    g1 = c.vertical_gradient(Y(CHEST_Z - 0.018), Y(_LM["waist_z"] + 0.005), top, mid)
+    g2 = c.vertical_gradient(Y(_LM["waist_z"] + 0.005), Y(_LM["hem_z"] + 0.09), mid, low)
+    g3 = c.vertical_gradient(Y(_LM["hem_z"] + 0.09), Y(_LM["hem_z"]), low, hem)
+    zsplit1, zsplit2 = _LM["waist_z"] + 0.005, _LM["hem_z"] + 0.09
+    grad = np.where((zc > zsplit1)[..., None], g1, np.where((zc > zsplit2)[..., None], g2, g3))
+    c.paint(front, grad, 1.0)
+    # Side panels (torso sides, armpit down): white at the top to light blue at the hem, feathered at the
+    # armpit (above it the strap band is a 3D attribute along the armhole). Back seam at 305 from center.
+    armpit = _LM["shoulder_z"] - 0.07
+    panel = ((np.abs(X - 500) >= seam) & (np.abs(X - 500) < 305 - 0.00008 * ((430 * k - Yg) / k) ** 2)).astype(np.float32)
+    panel *= np.clip((Y(armpit) - Yg) / 12.0, 0.0, 1.0)
+    c.paint(panel, c.vertical_gradient(Y(armpit), Y(_LM["hem_z"]), pal["jersey_side"], "#b9d6ea"), 1.0)
+    # Lower-front graphic: thin white arcs sweeping from her lower right up toward her left side.
+    arcs = [([(330, 0.975), (430, 1.02), (540, 1.075), (640, 1.14), (700, 1.19)], 3.0),
+            ([(340, 0.955), (450, 0.992), (560, 1.042), (660, 1.098), (706, 1.132)], 2.0),
+            ([(430, 0.932), (520, 0.957), (610, 0.998), (692, 1.052)], 3.4),
+            ([(298, 1.035), (360, 1.0), (420, 0.965), (480, 0.94)], 2.4),
+            ([(560, 0.93), (640, 0.966), (702, 1.012)], 1.8)]
+    zr = _LM["hem_z"] + 0.02, _LM["waist_z"] + 0.1                    # authored for hem..waist of the reference body
     polys = []
-    for j in range(7):
-        y0 = (75 + j * 15 + rng.uniform(-6, 6)) * k    # above the hem
-        pts = []
-        for i in range(24):
-            t = i / 23.0
-            x = 300 + 420 * t
-            y = y0 + (150 * t ** 1.6 + 14 * math.sin(t * 5.0 + j)) * k
-            pts.append((x, y))
-        w = rng.uniform(2.2, 4.8)
-        polys.append(c.stroke_polygon(pts[::2], [0.4, w, w, w * 0.8, 0.4], samples=10))
-    for cx, cy, r0 in ((470, 175, 40), (585, 225, 28), (395, 125, 24)):
-        cy *= k
-        spiral = [(cx + (r0 * (1 - 0.7 * t)) * 1.25 * math.cos(6.0 * t + 0.6), cy + r0 * k * (1 - 0.7 * t) * math.sin(6.0 * t + 0.6))
-                  for t in np.linspace(0.0, 1.0, 30)]
-        polys.append(c.stroke_polygon(spiral[::2], [3.8, 3.2, 2.2, 0.4], samples=10))
-    swirl = c.mask_polygons(polys, blur_mm=0.35) * front
-    c.paint(swirl, pal["jersey_print"], 0.75)
-    # Four-point sparkles and a thin ring on the lower front, toward her left (front reference).
-    for sx_, sy_, r_ in ((575, 205, 26), (515, 238, 12), (640, 150, 9)):
-        sy_ *= k
+    for pts, w in arcs:
+        q = [(x, Y(zr[0] + (z - 0.936) / (1.2 - 0.936) * (zr[1] - zr[0]))) for x, z in pts]
+        polys.append(c.stroke_polygon(q, [0.2, w, w, w * 0.8, 0.2], samples=12))
+    c.paint(c.mask_polygons(polys, blur_mm=0.3) * front, "#f4fbff", 0.9)
+    # Halftone toward the hem: dots growing downward (white on the pale cyan).
+    zt = _LM["hem_z"] + 0.12
+    t = np.clip((Y(zt) - Yg) / (Y(zt) - Y(_LM["hem_z"])), 0.0, 1.0)
+    gx, gy = (X % 7.0) - 3.5, (Yg % 6.0) - 3.0
+    dots = (np.sqrt((gx * 0.85) ** 2 + gy ** 2) < 0.4 + 1.5 * t).astype(np.float32) * (t > 0.02)
+    c.paint(dots * front, "#ffffff", 0.32)
+    # Sparkles (4-point stars) and a thin ring around the big one, on her left of the stomach.
+    zs = _LM["waist_z"] + 0.012
+    for sx_, dz_, r_ in ((561, 0.0, 17.0), (490, 0.018, 10.0), (620, 0.05, 6.0)):
+        cy = Y(zs + dz_)
         arms = []
         for ang in (0.0, math.pi / 2, math.pi, 1.5 * math.pi):
-            tip = (sx_ + 1.25 * r_ * math.cos(ang), sy_ + r_ * k * math.sin(ang))
-            arms.append(c.stroke_polygon([(sx_, sy_), tip], [r_ * 0.16, 0.02], samples=8))
-        c.paint(c.mask_polygons(arms, blur_mm=0.25) * front, "#ffffff", 0.95)
-    ring = [(575 + 1.25 * 44 * math.cos(t), 205 * k + 44 * k * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 60)]
-    c.paint(c.mask_stroke(ring, [1.6] * len(ring), blur_mm=0.25) * front, "#ffffff", 0.8)
-    # Chest: the team wordmark across the bust line, the number centered below it, a crest on her left chest.
-    c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=5, stroke_color="#a9c9e6")
-    c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=2.2, stroke_color="#13254a")
-    c.text("2", 500, cz - 62 * k, 125 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
-    crest = [(612, cz + 118 * k), (648, cz + 124 * k), (684, cz + 118 * k), (682, cz + 96 * k), (648, cz + 76 * k),
-             (614, cz + 96 * k)]
-    c.paint(c.mask_polygon(crest, blur_mm=0.4), "#e8f2fb", 1.0)
-    inner = [(622, cz + 113 * k), (648, cz + 118 * k), (674, cz + 113 * k), (672, cz + 98 * k), (648, cz + 83 * k),
-             (624, cz + 98 * k)]
-    c.paint(c.mask_polygon(inner, blur_mm=0.3), "#5e9fd6", 1.0)
-    c.text("W", 648, cz + 100 * k, 26 * k, "#f4f8fc", SCRIPT_FONT)
-    # Back number (centered, larger; the back seam is at u = 0 / 1).
-    c.text("2", 1000 * 0.02, 260 * k, 190 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
-    c.text("2", 1000 * 0.98 + 40, 260 * k, 190 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
+            tip = (sx_ + 1.25 * r_ * math.cos(ang), cy + r_ * math.sin(ang))
+            arms.append(c.stroke_polygon([(sx_, cy), tip], [r_ * 0.2, 0.02], samples=8))
+        c.paint(c.mask_polygons(arms, blur_mm=0.25) * front, "#ffffff", 0.97)
+    ring = [(561 + 1.25 * 33 * math.cos(a_), Y(zs) + 33 * math.sin(a_)) for a_ in np.linspace(0, 2 * math.pi, 72)]
+    c.paint(c.mask_stroke(ring, [1.4] * len(ring), blur_mm=0.25) * front, "#ffffff", 0.85)
+    # Chest: wordmark over the upper bust, the number just below the apex (front reference hierarchy).
+    wz, nz_ = Y(CHEST_Z + 0.052), Y(CHEST_Z - 0.024)
+    c.text("weasels", 500, wz, 54, "#f4f8fc", SCRIPT_FONT, stroke_mm=4.2, stroke_color="#9ccbec")
+    c.text("weasels", 500, wz, 54, "#f7fbff", SCRIPT_FONT, stroke_mm=1.5, stroke_color="#13254a")
+    c.text("2", 506, nz_ - 4, 84, "#7fb4de", FONT)                                       # soft blue offset shadow
+    c.text("2", 500, nz_, 84, pal["jersey_print"], FONT, stroke_mm=1.6, stroke_color="#13254a")
+    # Round crest near her left strap.
+    cx_, cy_ = 586, Y(_LM["neck_z"] - 0.02)
+    c.paint(c.mask_ellipse(cx_, cy_, 20, 14, blur_mm=0.3), "#7fb0dc", 1.0)
+    c.paint(c.mask_ellipse(cx_, cy_, 17, 12, blur_mm=0.3), "#dcecf8", 1.0)
+    star = [(cx_ + 9 * (1.0 if i % 2 == 0 else 0.42) * math.cos(math.pi / 2 + i * math.pi / 5),
+             cy_ + 6.5 * (1.0 if i % 2 == 0 else 0.42) * math.sin(math.pi / 2 + i * math.pi / 5)) for i in range(10)]
+    c.paint(c.mask_polygon(star, blur_mm=0.2), "#3f78b8", 1.0)
+    # Back number between the shoulder blades (the back seam is at u = 0 / 1).
+    bz = Y(_LM["chest_z"] + 0.02)
+    for bx in (0.0, 1000.0):
+        c.text("2", bx, bz, 130, pal["jersey_print"], FONT, stroke_mm=1.8, stroke_color="#13254a")
+    # Fine sports-mesh weave everywhere (reads up close, disappears at game distance).
+    weave = ((np.sin(X * 2.6) * np.sin(Yg * 3.1)) > 0.55).astype(np.float32)
+    c.paint(weave, "#000000", 0.035)
     c.save(path, alpha=False)
     log("painted", path)
     return path

@@ -196,7 +196,7 @@ class Body:
         """(z, y) of the chest's most forward point (garments hang from it)."""
         p, s = self.p, self.s
         c = self._bust_center()
-        return c[2] - 0.01 * s, c[1] + 0.004 * s - 0.04 * s * p["bust"]
+        return c[2] - 0.01 * s, c[1] + 0.004 * s - 0.012 * s * max(p["bust"] - 1.0, 0.0) - 0.04 * s * p["bust"]
 
     def _bust_center(self):
         p, s = self.p, self.s
@@ -230,7 +230,7 @@ class Body:
             # angled slightly outward, with a natural valley between. Smooth, never a disc or a shelf.
             top = _v(sx * 0.047 * s * tw, bc[1] + 0.016 * s, self.tz(0.75))
             # A fuller chest sits a little wider and lower, so the two forms keep a valley between them.
-            low = _v(sx * (bc[0] + 0.004 * s + 0.012 * s * max(bu - 1.0, 0.0)), bc[1] + 0.004 * s,
+            low = _v(sx * (bc[0] + 0.004 * s + 0.012 * s * max(bu - 1.0, 0.0)), bc[1] + 0.004 * s - 0.012 * s * max(bu - 1.0, 0.0),
                      bc[2] - 0.01 * s - 0.008 * s * max(bu - 1.0, 0.0))
             parts.append((sdf.RoundCone(top, low, 0.022 * s * bu, 0.04 * s * bu), 0.045 * s))
         sm = p["shoulder_mass"] * s

@@ -1,11 +1,12 @@
 """Sara: head, face and eyes.
 
-Identity notes driving the numbers (characters/sara/character.json face.design_notes):
-soft oval with a small pointed chin, cheeks fuller than the jaw suggests,
-eye line at ~51% of head height, large but vertically shallow eyes under a
-heavy upper lid, thick upper lash line with a slight outer wing, thin broken
-lower lash line, thin straight brows angled toward the nose, minimal nose
-with a pink tip, small mouth parted in an exhale.
+Identity (front reference sara_standing_front34.png, V18 pass): a slender soft oval with a gently convex
+jaw into a small, softly pointed chin; large but ELONGATED almond eyes whose upper lid carries the
+expression (focused, confident, soft), a liner wing at the outer corner, the iris tucked under the lid;
+thin, long brows set high; a small nose placed low enough to read as a young woman (not a doll), with a
+real bridge that turns a plane in 3/4; a small mouth set into the lower face with a confident half-smile.
+Authored asymmetry, all subtle: her right eye a touch less open, her left brow a hair higher, the mouth a
+touch toward her left with that corner lifted, her right cheek contour slightly fuller.
 """
 from __future__ import annotations
 
@@ -152,13 +153,16 @@ def paint_face(path, px=2048):
                                   [0.55, 0.22]) for i in range(4)]
         c.paint(c.mask_polygons(polys, blur_mm=0.08), "#e8889b", 0.38)
         # Pink flush around the eye: under the lower lid and at the outer corner, like the reference close-up.
-        c.paint(c.mask_gauss(ex + sx * 2.0, ez - 10.2 * k, 12.5 * k, 3.0 * k), "#f3b3c2", 0.55)
+        c.paint(c.mask_gauss(ex + sx * 2.0, ez - 9.2 * k, 12.5 * k, 3.0 * k), "#f3b3c2", 0.55)
         c.paint(c.mask_gauss(ex + sx * 15.0 * k, ez + 1.0 * k, 3.5 * k, 4.0 * k), "#f0a9ba", 0.35)
-        c.paint(c.mask_gauss(ex + sx * 1.0, ez + 11.5 * k, 11.0 * k, 2.2 * k), "#f5c6cf", 0.35)   # upper lid tint
+        c.paint(c.mask_gauss(ex + sx * 1.0, ez + 10.2 * k, 11.0 * k, 2.2 * k), "#f5c6cf", 0.35)   # upper lid tint
         # Brows (front reference): thin, long, gently arched lines well above the lid, running past the
         # outer corner; the inner end starts above the inner corner.
-        brow = [(ex - sx * 12.5 * k, ez + 14.6 * k), (ex - sx * 3.0 * k, ez + 17.4 * k), (ex + sx * 7.0 * k, ez + 17.9 * k),
-                (ex + sx * 15.5 * k, ez + 15.6 * k), (ex + sx * 19.0 * k, ez + 13.8 * k)]
+        # Her left brow sits a hair higher than her right (authored asymmetry); inner ends a little lower
+        # than the arch: focused, not surprised.
+        bz = ez + (0.4 * k if sx > 0 else 0.0)
+        brow = [(ex - sx * 12.5 * k, bz + 13.6 * k), (ex - sx * 3.0 * k, bz + 16.4 * k), (ex + sx * 7.0 * k, bz + 17.0 * k),
+                (ex + sx * 15.5 * k, bz + 15.0 * k), (ex + sx * 19.0 * k, bz + 13.2 * k)]
         c.paint(c.mask_stroke(brow, [1.1, 1.6, 1.5, 1.0, 0.25], blur_mm=0.06), "#2a1d24", 0.97)
     # Nose: tiny shadow tick + a soft pink bridge flush (the reference's nose is almost only shadow).
     nz = LANDMARKS["nose_tip_z"] * 1000
@@ -168,7 +172,8 @@ def paint_face(path, px=2048):
     # Mouth (front reference): a small, slightly parted, confident smile; flat upper edge with the
     # corners lifted, a crescent opening, a band of upper teeth, a soft pink lower lip.
     mz = LANDMARKS["mouth_z"] * 1000
-    P = lambda pts: [(x * HS, mz + dy * HS) for x, dy in pts]  # noqa: E731
+    # A confident half-smile: the mouth sits a touch toward her left and that corner lifts slightly.
+    P = lambda pts: [(x * HS + 0.35, mz + (dy + 0.028 * x) * HS) for x, dy in pts]  # noqa: E731
     mouth_poly = paint.catmull(P([(-9.8, 0.95), (-5.6, 1.2), (0.0, 1.3), (5.6, 1.2), (9.8, 0.95), (6.2, -1.1),
                                   (0.0, -1.85), (-6.2, -1.1)]), 12, closed=True)
     m_mask = c.mask_polygon(mouth_poly, blur_mm=0.07)
@@ -188,29 +193,39 @@ def paint_face(path, px=2048):
 
 # Eye-local design coordinates: origin at the eye center, +x toward the OUTER corner, +y up (design mm,
 # scaled by EYE_SCALE on the face).
-# Sara's eye: a large but horizontal almond opening (aspect ~2:1), the outer corner lifted, a strong
-# upper lid; the iris is sized INSIDE the opening (its top tucks under the lid), never a round button.
-# Front reference: the upper lid rises fast from the inner corner and runs almost flat to a lifted outer
-# corner, where a sharp liner wing flicks up and out; the lower lid is soft and faint.
-INNER = (-15.6, 0.0)
-OUTER = (17.2, 3.4)
-UPPER_LID = [INNER, (-12.6, 5.0), (-6.0, 8.2), (1.5, 9.1), (8.5, 8.6), (13.8, 6.6), OUTER]
-LOWER_LID = [INNER, (-11.5, -4.0), (-4.0, -6.9), (3.5, -7.3), (10.5, -5.6), (14.8, -2.4), OUTER]
-WING = (24.0, 7.1)
+# Sara's eye (front reference, V18): large but ELONGATED and elegant (aspect ~2.3:1, never a round doll
+# eye). The upper lid carries the expression: it rises fast out of a slightly low inner corner, then runs
+# long and nearly level, easing down a little over the outer third (a soft, focused hood) into a lifted
+# outer corner where the liner wing flicks up and out. The iris is tucked under that lid and cut by the
+# lower lid (focused, confident); the lower lid rises gently toward the outer corner (softness).
+INNER = (-15.8, -0.4)
+OUTER = (17.4, 3.0)
+UPPER_LID = [INNER, (-13.0, 3.6), (-7.0, 6.9), (0.0, 7.9), (7.5, 7.6), (13.2, 5.8), OUTER]
+LOWER_LID = [INNER, (-12.0, -3.6), (-5.0, -6.0), (2.5, -6.5), (9.5, -5.2), (14.4, -2.2), OUTER]
+WING = (24.0, 6.6)
 CORNER_Y = 1.3
-IRIS_C = (0.8, 0.3)
-IRIS_R = (8.0, 8.9)
+IRIS_C = (0.6, -0.2)
+IRIS_R = (7.8, 8.8)
+# Subtle, authored asymmetry: her right eye a touch less open than her left (upper lid height factor).
+EYE_OPEN = {"L": 1.0, "R": 0.955}
 
 
-def _opening_polygon():
-    return paint.catmull(UPPER_LID, 14) + paint.catmull(LOWER_LID[::-1], 14)
+def _lids(open_k=1.0):
+    """(upper, lower) lid control points; open_k scales the upper lid above the corner line."""
+    upper = [(x, CORNER_Y + (y - CORNER_Y) * open_k) if y > CORNER_Y else (x, y) for x, y in UPPER_LID]
+    return upper, LOWER_LID
 
 
-def paint_eye_white(path, px=2048):
+def _opening_polygon(open_k=1.0):
+    upper, lower = _lids(open_k)
+    return paint.catmull(upper, 14) + paint.catmull(lower[::-1], 14)
+
+
+def paint_eye_white(path, px=2048, open_k=1.0):
     """RGB = sclera shading; A = the eye opening mask."""
     c = paint.Canvas(50, 50, px, (-25, -25), supersample=2, background=(*paint.hex_rgb("#f7f6fc"), 0.0))
-    opening = c.mask_polygon(_opening_polygon(), blur_mm=0.1)
-    c.paint(np.ones_like(opening), c.vertical_gradient(10.0, 0.5, "#9aa4c4", "#f7f6fc"), 1.0)   # lid shadow
+    opening = c.mask_polygon(_opening_polygon(open_k), blur_mm=0.1)
+    c.paint(np.ones_like(opening), c.vertical_gradient(8.5, 0.0, "#9aa4c4", "#f7f6fc"), 1.0)    # lid shadow
     c.paint(c.mask_gauss(-14.0, 0.2, 2.2, 1.8), "#f0a9b8", 0.8)       # inner corner
     c.paint(c.mask_gauss(15.4, 2.2, 2.4, 1.6), "#efb9c5", 0.55)       # outer corner
     # Pink waterline along the lower lid.
@@ -283,16 +298,17 @@ def paint_iris(path, px=2048, palette=None, mirror_highlights=False):
     return path
 
 
-def paint_lash(path, px=2048):
+def paint_lash(path, px=2048, open_k=1.0):
     """Upper lid: one heavy liner line (fine at the inner corner, heaviest over the outer third) ending in
     a sharp wing that flicks up and out, two or three lash spikes on the outer half, a faint crease; the
     lower lid is a soft, faint line with a few ticks at the outer corner (front reference). Alpha texture."""
     c = paint.Canvas(50, 50, px, (-25, -25), supersample=2, background=(*paint.hex_rgb("#211a20"), 0.0))
     col = "#1b1418"
-    upper = paint.catmull(UPPER_LID, 20)
+    lid_u, _ = _lids(open_k)
+    upper = paint.catmull(lid_u, 20)
     n = len(upper)
     # Main line + wing: the line sits on the lid edge, so its lower half covers the top of the eye (heavy lid).
-    line_pts = [(INNER[0] + 0.4, INNER[1] + 0.6)] + UPPER_LID[1:-1] + [(OUTER[0] + 0.2, OUTER[1] + 0.35), WING]
+    line_pts = [(INNER[0] + 0.4, INNER[1] + 0.6)] + lid_u[1:-1] + [(OUTER[0] + 0.2, OUTER[1] + 0.35), WING]
     polys = [c.stroke_polygon(line_pts, [0.7, 1.5, 2.4, 3.0, 3.4, 3.6, 2.4, 0.1])]
     # Inner-corner tick: a short line pointing down and in.
     polys.append(c.stroke_polygon([(INNER[0] + 0.6, INNER[1] + 0.5), (INNER[0] - 1.6, INNER[1] - 0.9)], [0.5, 0.06], samples=6))
@@ -311,7 +327,7 @@ def paint_lash(path, px=2048):
     polys.append(c.stroke_polygon([(OUTER[0] - 0.4, OUTER[1] - 0.3), (19.8, 2.9), (22.2, 3.4)], [1.0, 0.5, 0.04], samples=8))
     c.paint(c.mask_polygons(polys, blur_mm=0.035), col, 1.0)
     # Crease (double eyelid), faint, over the middle / outer part.
-    crease = [(-3.0, 13.0), (3.5, 13.7), (10.0, 12.6), (15.0, 9.9)]
+    crease = [(-3.0, 11.8 * open_k), (3.5, 12.5 * open_k), (10.0, 11.4 * open_k), (15.0, 8.9)]
     c.paint(c.mask_stroke(crease, [0.1, 0.3, 0.26, 0.05], blur_mm=0.08), "#7d4c5a", 0.6)
     # Lower lid: a soft, faint line over the outer 55 %, three small ticks at the outer corner.
     lower = paint.catmull(LOWER_LID, 20)

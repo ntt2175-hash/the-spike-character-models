@@ -264,11 +264,13 @@ def _math(nt, op, a, b=None, x=0, y=0, clamp=False):
 
 def toon_textured(name, image_path, shade_mul=(0.8, 0.72, 0.8), threshold=0.3, softness=0.05, rim_mask=1.0,
                   uv_map="UVMap", mask_attribute=None, fallback="#fae3e5", palette=None, overlay_attribute=None,
-                  overlay_color="#22325a"):
+                  overlay_color="#22325a", overlays=()):
     """Toon material whose base color is a painted texture; shade = base x shade_mul.
 
     mask_attribute: a point attribute (0..1) that blends the texture toward the fallback color
     (e.g. keep face features off the back of the head).
+    overlay_attribute / overlays: point attributes (0..1) that blend in a flat color on top, in order
+    (garment trims and panels defined in 3D where a texture projection cannot place them).
     """
     mat = bpy.data.materials.get(name)
     if mat is not None:
@@ -300,6 +302,13 @@ def toon_textured(name, image_path, shade_mul=(0.8, 0.72, 0.8), threshold=0.3, s
         nt.links.new(attr2.outputs["Fac"], mix2.inputs["Factor"])
         nt.links.new(color, mix2.inputs["A"])
         color = mix2.outputs["Result"]
+    for i, (attr_name, col) in enumerate(overlays):
+        a3 = _node(nt, "ShaderNodeAttribute", -500, -650 - 200 * i, attribute_type="GEOMETRY", attribute_name=attr_name)
+        m3 = _node(nt, "ShaderNodeMix", -250, -450 - 200 * i, data_type="RGBA")
+        m3.inputs["B"].default_value = _rgba(col, palette)
+        nt.links.new(a3.outputs["Fac"], m3.inputs["Factor"])
+        nt.links.new(color, m3.inputs["A"])
+        color = m3.outputs["Result"]
     shade = _node(nt, "ShaderNodeMix", -50, -120, data_type="RGBA", blend_type="MULTIPLY")
     shade.inputs["Factor"].default_value = 1.0
     shade.inputs["B"].default_value = (*shade_mul, 1.0)

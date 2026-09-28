@@ -36,9 +36,12 @@ DEFAULTS = {
     "socket": 1.0,         # eye socket depth
     "brow": 1.0,           # brow ridge volume above the soft brow plane (1 = none, 2 = pronounced)
     "ear": 1.0,            # ear size
+    "asym": 0.0,           # authored asymmetry: her right midface contour this much fuller (0.015 = 1.5 %)
 }
 
 LOWER, UPPER = 0.078, 0.089          # reference head: eye line -> chin, eye line -> crown (m)
+NOSE_DZ, MOUTH_DZ = -0.0345, -0.053  # nose tip / mouth line below the eye line: ~45 % and ~68 % of eye -> chin
+                                     # (a high, tiny nose reads as a doll; the front reference sits lower)
 EYE_T = LOWER / (LOWER + UPPER)
 
 # Reference primary mass (head_scale 1). Rows: t (0 chin .. 1 crown), half width, y front, y back,
@@ -52,10 +55,10 @@ PROFILE = np.array([
     [0.000, 0.0008, -0.0585, -0.0545, -0.0565, 2.0],    # chin tip: a soft point, not a ball
     [0.006, 0.0060, -0.0620, -0.0495, -0.0555, 2.0],
     [0.015, 0.0120, -0.0660, -0.0430, -0.0505, 2.1],
-    [0.050, 0.0260, -0.0715, -0.0320, -0.0450, 2.2],
-    [0.100, 0.0380, -0.0772, -0.0140, -0.0380, 2.25],
-    [0.160, 0.0490, -0.0800, 0.0060, -0.0280, 2.35],
-    [0.220, 0.0578, -0.0820, 0.0280, -0.0170, 2.45],
+    [0.050, 0.0252, -0.0715, -0.0320, -0.0450, 2.2],
+    [0.100, 0.0368, -0.0772, -0.0140, -0.0380, 2.25],
+    [0.160, 0.0478, -0.0800, 0.0060, -0.0280, 2.35],
+    [0.220, 0.0570, -0.0820, 0.0280, -0.0170, 2.45],
     [0.280, 0.0655, -0.0835, 0.0520, -0.0070, 2.55],
     [0.340, 0.0725, -0.0845, 0.0750, 0.0010, 2.6],
     [0.420, 0.0788, -0.0850, 0.0930, 0.0060, 2.6],
@@ -96,7 +99,8 @@ class Head:
         p, s = self.p, self.s
         self.chin_z = self.E[2] - LOWER * s * p["face_length"]
         self.crown_z = self.E[2] + UPPER * s * p["cranium"]
-        self.loft = sdf.ZLoft(self._stations())
+        self.base = sdf.ZLoft(self._stations())
+        self.loft = _SideScale(self.base, self.p["asym"], self.E[2], s) if self.p["asym"] else self.base
         self._field = None
 
     # ------------------------------------------------------------------ primary mass
@@ -124,8 +128,8 @@ class Head:
 
     def surface_y(self, x, z):
         """Front surface y of the primary mass at (x, z) (analytic, before features)."""
-        zc = np.clip(z, self.loft.z0, self.loft.z1)
-        w, yf, _, nf, _, yw = sdf._interp_cols(zc, self.loft.Z, self.loft.V)
+        zc = np.clip(z, self.base.z0, self.base.z1)
+        w, yf, _, nf, _, yw = sdf._interp_cols(zc, self.base.Z, self.base.V)
         k = max(0.0, 1.0 - abs(x / w) ** nf)
         return float(yw - (yw - yf) * k ** (1.0 / nf))
 
@@ -173,21 +177,24 @@ class Head:
         # 4. nose: subtle bridge rising out of the face plane, small tip, soft wings (no underside cut: in toon
         #    shading it reads as a gray patch over the lip)
         n = p["nose"]
-        tip_dz = -0.0285
-        bridge_top = self.on(0.0, -0.007, -0.0019 * s)
-        bridge_top[1] += 0.0019 * s
+        tip_dz = NOSE_DZ
+        # A narrow bridge (a clear side plane in 3/4) that rises out of the face plane between the eyes.
+        bridge_top = self.on(0.0, -0.008, -0.0016 * s)
+        bridge_top[1] += 0.0016 * s
         bridge_low = self.on(0.0, tip_dz + 0.0055, 0.0034 * s * n)
-        bridge_low[1] += 0.0032 * s * n
-        add(sdf.RoundCone(bridge_top, bridge_low, 0.0019 * s, 0.003 * s * n), 0.008)
+        bridge_low[1] += 0.0027 * s * n
+        add(sdf.RoundCone(bridge_top, bridge_low, 0.0016 * s, 0.0027 * s * n), 0.007)
         add(self.bump(0.0, tip_dz, 0.0052 * n, (0.0047 * n, 0.0042 * n, 0.0040 * n)), 0.006)
         for sx in (1.0, -1.0):
             add(self.bump(sx * 0.0043 * n, tip_dz - 0.0018, 0.0022 * n, (0.0026, 0.0024, 0.0022)), 0.004)
         # 5. lips and mouth: small, with volume, set into the lower face (not stuck on)
-        m_dz = -0.0502
+        m_dz = MOUTH_DZ
         L = p["lips"]
         add(self.bump(0.0, m_dz + 0.0032, 0.0006 * L, (0.0105, 0.0036, 0.0028 * L)), 0.008)
         add(self.bump(0.0, m_dz - 0.0042, 0.0008 * L, (0.0088, 0.0038, 0.0032 * L)), 0.008)
         sub(self.dent(0.0, m_dz, 0.0005, (0.0082, 0.0045, 0.0022)), 0.004)
+        # the soft crease under the lower lip: the mouth sits IN the lower face, the chin pad below it
+        sub(self.dent(0.0, m_dz - 0.0098, 0.0004, (0.011, 0.005, 0.0032)), 0.006)
         # 6. ears: helix body tilted back, lobe, concha; between the eye line and the nose base
         e = p["ear"]
         R = sdf.rotation_to(_v(0.0, 0.2, 0.98))
@@ -233,5 +240,27 @@ class Head:
 
     # ------------------------------------------------------------------ landmarks for painting / rigging
     def landmarks(self):
-        return {"nose_tip_z": self.dz(-0.0285), "mouth_z": self.dz(-0.0502), "chin_z": self.chin_z,
+        return {"nose_tip_z": self.dz(NOSE_DZ), "mouth_z": self.dz(MOUTH_DZ), "chin_z": self.chin_z,
                 "crown_z": self.crown_z, "eye_z": float(self.E[2])}
+
+
+class _SideScale:
+    """Authored asymmetry for the primary mass: her right side (x < 0) is widened by `a` over the midface
+    (cheekbone to jaw), fading out above the eyes and at the chin. Small values only (a few percent)."""
+
+    def __init__(self, prim, a, eye_z, s):
+        self.prim, self.a, self.ez, self.s = prim, float(a), float(eye_z), float(s)
+        self.z0, self.z1 = prim.z0, prim.z1
+
+    def bbox(self):
+        lo, hi = self.prim.bbox()
+        k = 1.0 + abs(self.a)
+        return np.array([lo[0] * k, lo[1], lo[2]]), np.array([hi[0] * k, hi[1], hi[2]])
+
+    def eval(self, P):
+        dz = (P[..., 2] - self.ez) / self.s
+        w = _bump(dz, -0.07, -0.05, -0.012, 0.004)
+        k = 1.0 + self.a * w * (P[..., 0] < 0)
+        Q = np.array(P, dtype=np.float64, copy=True)
+        Q[..., 0] = Q[..., 0] / k
+        return self.prim.eval(Q)

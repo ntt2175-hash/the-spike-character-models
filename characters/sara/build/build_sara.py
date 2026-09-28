@@ -203,6 +203,23 @@ def garment(name, field, keeps, quads, thickness, pre_decimate=0.3):
     return obj
 
 
+def trim_garment(name, solid, keeps, grow, thickness, quads=4000, margin=0.006):
+    """A thin band (trim, binding, piping) lying on a garment's outer surface: only the region near the
+    band is meshed (fine quads for a narrow strip), then cut exactly to it and thickened."""
+    f = solid.copy()
+    f.offset(grow)
+    pts = f.points(tuple(slice(0, n) for n in f.shape)).reshape(-1, 3)
+    near = keep_distance(pts, keeps).reshape(f.shape)
+    f.d = np.maximum(f.d, (near - margin).astype(np.float32))
+    f.d = np.maximum(f.d, -f.d - 0.008)             # a thin shell under the surface: a small closed region
+    obj = common.sdf_to_object(name, f, LOD0)
+    common.smooth(obj, 0.3, 2)
+    common.quadriflow(obj, quads)
+    cut_surface(obj, keeps)
+    thicken(obj, thickness)
+    return obj
+
+
 def cull_covered_skin(body_obj, jersey_solid, shorts_solid, bones, margin=0.012):
     """Delete body faces fully hidden under tight garments (standard game practice: no z-fighting,
     fewer triangles). A margin is kept at every opening so lifted hems never reveal a gap."""
@@ -221,6 +238,19 @@ def cull_covered_skin(body_obj, jersey_solid, shorts_solid, bones, margin=0.012)
     bm.to_mesh(me)
     bm.free()
     log(f"culled {len(kill)} hidden skin faces under the uniform")
+
+
+def strap_attribute(obj, bones, width=0.017):
+    """'strap' = the light band along each armhole over the shoulder strap (front reference): the side
+    panel continues up the outer half of the strap; the inner half by the neckline stays navy."""
+    P = verts_of(obj)
+    cuts = G.jersey_cuts(bones)
+    lm = body.landmarks(bones)
+    d = np.minimum(np.abs(cuts["arm_L"][0].eval(P)), np.abs(cuts["arm_R"][0].eval(P)))
+    band = np.clip(1.0 - (d - width * 0.75) / (width * 0.25), 0.0, 1.0)
+    band *= np.clip((P[:, 2] - (lm["shoulder_z"] - 0.075)) / 0.02, 0.0, 1.0)      # above the armpit only
+    a = obj.data.attributes.new("strap", "FLOAT", "POINT")
+    a.data.foreach_set("value", band.astype(np.float32))
 
 
 def trim_attribute(obj, cuts, width=0.009):
@@ -289,7 +319,14 @@ def main(out_dir: Path, tex_cache: Path | None):
         clip_objs.append(o)
     # --- garments ---------------------------------------------------------------------------
     jersey_solid = G.jersey_field(bones)
-    jersey = garment("sara_jersey_LOD0", jersey_solid, G.jersey_keep(bones), 9000, 0.0022)
+    jersey = garment("sara_jersey_LOD0", jersey_solid, G.jersey_keep(bones), 11000, 0.0022)
+    # The jersey's real garment edges and seams: V-neck trim + piping, armhole bindings, side-seam piping.
+    trims = []
+    for tname, tkeeps, grow, tthick, tmat in G.jersey_trims(bones, 0.0022):
+        o = trim_garment(f"sara_jersey_{tname}_LOD0", jersey_solid, tkeeps, grow, tthick,
+                         quads=5000 if "neck" in tname else 3500)
+        o["trim_mat"] = tmat
+        trims.append(o)
     shorts_solid = G.shorts_field(bones)
     shorts_keeps, _ = G.shorts_keep(bones)
     shorts = garment("sara_shorts_LOD0", shorts_solid, shorts_keeps, 5000, 0.002)
@@ -317,8 +354,9 @@ def main(out_dir: Path, tex_cache: Path | None):
     log(f"geometry built in {time.time() - t0:.0f}s")
 
     # --- textures -----------------------------------------------------------------------------
-    names = {"face": "T_sara_face_base.png", "white": "T_sara_eye_white.png", "irisL": "T_sara_iris_L.png",
-             "irisR": "T_sara_iris_R.png", "lash": "T_sara_lash.png", "jersey": "T_sara_jersey.png",
+    names = {"face": "T_sara_face_base.png", "whiteL": "T_sara_eye_white_L.png", "whiteR": "T_sara_eye_white_R.png",
+             "irisL": "T_sara_iris_L.png", "irisR": "T_sara_iris_R.png", "lashL": "T_sara_lash_L.png",
+             "lashR": "T_sara_lash_R.png", "jersey": "T_sara_jersey.png",
              "shorts": "T_sara_shorts.png"}
     eye_pal = dict(character["face"]["eye_shader"])
     for k in ("iris_top", "iris_mid", "iris_bottom", "iris_ring", "iris_cog", "pupil"):
@@ -326,10 +364,12 @@ def main(out_dir: Path, tex_cache: Path | None):
     UP.configure(bones)
     painters = {
         "face": lambda p: head.paint_face(p),
-        "white": lambda p: head.paint_eye_white(p),
+        "whiteL": lambda p: head.paint_eye_white(p, open_k=head.EYE_OPEN["L"]),
+        "whiteR": lambda p: head.paint_eye_white(p, open_k=head.EYE_OPEN["R"]),
         "irisL": lambda p: head.paint_iris(p, palette=eye_pal),
         "irisR": lambda p: head.paint_iris(p, palette=eye_pal, mirror_highlights=True),
-        "lash": lambda p: head.paint_lash(p),
+        "lashL": lambda p: head.paint_lash(p, open_k=head.EYE_OPEN["L"]),
+        "lashR": lambda p: head.paint_lash(p, open_k=head.EYE_OPEN["R"]),
         "jersey": lambda p: UP.paint_jersey(p, pal),
         "shorts": lambda p: UP.paint_shorts(p, pal),
     }
@@ -343,7 +383,8 @@ def main(out_dir: Path, tex_cache: Path | None):
     cylindrical_uv(jersey, UP.JERSEY_Y0, UP.JERSEY_Z0, UP.JERSEY_Z1)
     cylindrical_uv(shorts, UP.SHORTS_Y0, UP.SHORTS_Z0, UP.SHORTS_Z1)
     cuts = G.jersey_cuts(bones)
-    trim_attribute(jersey, cuts["neck"] + cuts["arm_L"] + cuts["arm_R"] + cuts["hem"])
+    trim_attribute(jersey, cuts["neck"] + cuts["arm_L"] + cuts["arm_R"] + cuts["hem"], width=0.004)
+    strap_attribute(jersey, bones)
 
     # --- materials -------------------------------------------------------------------------------
     M = lambda n, b, s=None, **kw: toon.toon_material(n, b, s, pal, **kw)
@@ -355,9 +396,12 @@ def main(out_dir: Path, tex_cache: Path | None):
         "ribbon": materials_sara.satin_material(pal),
         "tie": M("M_sara_hairtie", "@hair_tie", "#18202e"),
         "jersey": toon.toon_textured("M_sara_jersey", tex / names["jersey"], shade_mul=(0.66, 0.7, 0.86), threshold=0.3,
-                                     softness=0.04, overlay_attribute="trim", overlay_color="#22325a"),
+                                     softness=0.04, overlay_attribute="trim", overlay_color="#22325a",
+                                     overlays=[("strap", "#e6eef6")]),
         "shorts": toon.toon_textured("M_sara_shorts", tex / names["shorts"], shade_mul=(0.62, 0.66, 0.84), threshold=0.3,
                                      softness=0.04),
+        "trim_white": M("M_sara_jersey_trim", "@jersey_side", "#b8c3d6", threshold=0.3, softness=0.04),
+        "piping": M("M_sara_jersey_piping", "@jersey_piping", "#12214a", threshold=0.3, softness=0.04),
         "pad": M("M_sara_kneepad", "@kneepad_sleeve", "#8ea6c4", threshold=0.28, softness=0.06),
         "plate": M("M_sara_kneeplate", "@kneepad_pad", "#b7c3d6", threshold=0.28, softness=0.06),
         "band": M("M_sara_kneeband", "@kneepad_band", "#4f86b8"),
@@ -384,8 +428,8 @@ def main(out_dir: Path, tex_cache: Path | None):
     for e in ears:
         dress(e, mats["skin"], width=0.0012)
     for (layer, side), obj in decals.items():
-        m = (toon.anime_eye_material(f"M_sara_eye_{side}", tex / names["white"], tex / names[f"iris{side}"])
-             if layer == "eye" else toon.anime_lash_material(f"M_sara_lash_{side}", tex / names["lash"]))
+        m = (toon.anime_eye_material(f"M_sara_eye_{side}", tex / names[f"white{side}"], tex / names[f"iris{side}"])
+             if layer == "eye" else toon.anime_lash_material(f"M_sara_lash_{side}", tex / names[f"lash{side}"]))
         m.node_tree.nodes["lid_heavy"].outputs[0].default_value = 0.2
         dress(obj, m, ol=None)
     dress(hair_obj, mats["hair"], hair_outline, 0.0008)
@@ -395,6 +439,8 @@ def main(out_dir: Path, tex_cache: Path | None):
     for o in clip_objs:
         dress(o, M(f"M_sara_clip_{o.name.split('_')[2]}", o["clip_color"], None, threshold=0.25, rim_mask=0.6), hair_outline, 0.0007)
     dress(jersey, mats["jersey"], cloth_outline, 0.0018)
+    for o in trims:
+        dress(o, mats[o["trim_mat"]], cloth_outline, 0.0005)
     dress(shorts, mats["shorts"], cloth_outline, 0.0016)
     for side in pads:
         dress(pads[side], mats["pad"], cloth_outline, 0.0012)
@@ -435,6 +481,10 @@ def main(out_dir: Path, tex_cache: Path | None):
     skin(jersey, bones, ["Hips", "Spine", "Chest", "UpperChest", "Neck", "LeftShoulder", "RightShoulder",
                          "LeftUpperArm", "RightUpperArm"] + hem_chains,
          bias={"LeftUpperArm": 1.8, "RightUpperArm": 1.8}, post=hem_fade)
+    for o in trims:                    # trims ride with the jersey
+        skin(o, bones, ["Hips", "Spine", "Chest", "UpperChest", "Neck", "LeftShoulder", "RightShoulder",
+                        "LeftUpperArm", "RightUpperArm"] + hem_chains,
+             bias={"LeftUpperArm": 1.8, "RightUpperArm": 1.8}, post=hem_fade)
     skin(shorts, bones, ["Hips", "Spine", "LeftUpperLeg", "RightUpperLeg", "LeftUpperLegTwist", "RightUpperLegTwist"])
     for side in ("Left", "Right"):
         skin(pads[side], bones, [f"{side}UpperLeg", f"{side}LowerLeg"], relax=4)
