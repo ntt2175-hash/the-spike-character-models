@@ -78,7 +78,7 @@
   },
   "body_shape": {
     "note": "Volume multipliers on the body master's reference body (1.0 = realistic athletic 1.66 m woman; ranges in pipeline/specs/body.json). Sara: slender, long-limbed, lightweight anime volleyball athlete; athleticism from length, posture and motion, not muscle volume. Moderately narrow, delicate shoulders; slender torso with a gradual rib-to-waist-to-pelvis transition (never pinched, never an hourglass); one coherent pelvis volume (depth follows width); slim but athletic thighs; small, structurally readable knees; slim calves with a controlled taper; ankles clearly narrower than the calves; segmented arms (deltoid, elbow, forearm belly, wrist); compact feet with an arch. Proportion-pass feedback: not thinner, better distributed.",
-    "torso_width": 0.9, "torso_depth": 1.0, "bust": 1.5, "waist_width": 0.93, "waist_depth": 0.98,
+    "torso_width": 0.9, "torso_depth": 1.0, "bust": 1.6, "waist_width": 0.93, "waist_depth": 0.98,
     "pelvis_width": 0.98, "pelvis_depth": 1.05, "glute": 0.97, "neck_width": 1.0,
     "shoulder_mass": 0.72, "deltoid": 0.82, "arm_thickness": 0.92, "forearm_thickness": 0.92, "wrist": 0.94,
     "thigh_thickness": 1.02, "thigh_outer": 0.65, "thigh_inner": 0.84, "knee_size": 0.92,

@@ -46,7 +46,7 @@ def side_seam_u(z, lm):
     z0, z1 = jersey_canvas(lm)
     k = (z1 - z0) * 1000.0 / 570.0
     yy = (430.0 * k - (np.asarray(z, dtype=np.float64) - z0) * 1000.0) / k
-    return 205.0 + 0.00018 * yy ** 2
+    return 172.0 + 0.00016 * yy ** 2         # far enough forward that the white panels read from the front
 
 
 class VNeck:

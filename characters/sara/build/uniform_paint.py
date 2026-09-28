@@ -69,7 +69,7 @@ def paint_jersey(path, pal, px=2048):
     # Side panels (torso sides, armpit down): white at the top to light blue at the hem, feathered at the
     # armpit (above it the strap band is a 3D attribute along the armhole). Back seam at 305 from center.
     armpit = _LM["shoulder_z"] - 0.07
-    panel = ((np.abs(X - 500) >= seam) & (np.abs(X - 500) < 305 - 0.00008 * ((430 * k - Yg) / k) ** 2)).astype(np.float32)
+    panel = ((np.abs(X - 500) >= seam) & (np.abs(X - 500) < 290 - 0.00008 * ((430 * k - Yg) / k) ** 2)).astype(np.float32)
     panel *= np.clip((Y(armpit) - Yg) / 12.0, 0.0, 1.0)
     c.paint(panel, c.vertical_gradient(Y(armpit), Y(_LM["hem_z"]), pal["jersey_side"], "#b9d6ea"), 1.0)
     # Lower-front graphic: thin white arcs sweeping from her lower right up toward her left side.
