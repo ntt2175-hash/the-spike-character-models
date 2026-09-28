@@ -104,6 +104,13 @@ FOREARM = np.array([                           # out/in = back of hand / palm; f
     (0.90, 0.020, 0.019, 0.026, 0.025),        # wrist: flatter than wide
     (1.00, 0.020, 0.019, 0.026, 0.025),
 ])
+PALM = np.array([                              # wrist -> knuckles; index side, little side, back, palm
+    (0.00, 0.0185, 0.0185, 0.0105, 0.0105),    # wrist: narrower than the forearm
+    (0.25, 0.0215, 0.0225, 0.011, 0.0112),     # heel of the palm
+    (0.60, 0.026, 0.0265, 0.0098, 0.0098),
+    (0.90, 0.0275, 0.028, 0.0088, 0.0088),
+    (1.00, 0.0275, 0.028, 0.0085, 0.0085),     # knuckles
+])
 FOOT = np.array([                              # heel -> toe tip; out, in, top (dorsal), bottom (plantar)
     (0.00, 0.019, 0.019, 0.023, 0.023),        # narrow, compact rounded heel
     (0.14, 0.024, 0.024, 0.044, 0.024),        # heel / ankle: the top rises steeply into the ankle
@@ -155,7 +162,7 @@ class Body:
         return {
             "hip_z": self.hip_z, "neck_z": self.neck_z, "torso_len": self.torso_len, "s": s, "kt": self.kt,
             "waist_z": self.tz(0.377), "chest_z": self.tz(0.664), "waistband_z": self.hip_z + 0.12 * s * self.kt,
-            "hem_z": self.hip_z + 0.05 * s * self.kt, "shoulder_x": abs(ua_l[0]), "shoulder_z": ua_l[2],
+            "hem_z": self.hip_z - 0.012 * s * self.kt, "shoulder_x": abs(ua_l[0]), "shoulder_z": ua_l[2],
             "torso_half_width": 0.118 * s * p["torso_width"], "torso_half_depth": 0.086 * s * p["torso_depth"],
             "pelvis_half_width": 0.131 * s * p["pelvis_width"],
         }
@@ -222,7 +229,9 @@ class Body:
             # Chest: one teardrop per side - a tapered slope from the upper chest into a rounder lower mass,
             # angled slightly outward, with a natural valley between. Smooth, never a disc or a shelf.
             top = _v(sx * 0.047 * s * tw, bc[1] + 0.016 * s, self.tz(0.75))
-            low = _v(sx * (bc[0] + 0.004 * s), bc[1] + 0.004 * s, bc[2] - 0.01 * s)
+            # A fuller chest sits a little wider and lower, so the two forms keep a valley between them.
+            low = _v(sx * (bc[0] + 0.004 * s + 0.012 * s * max(bu - 1.0, 0.0)), bc[1] + 0.004 * s,
+                     bc[2] - 0.01 * s - 0.008 * s * max(bu - 1.0, 0.0))
             parts.append((sdf.RoundCone(top, low, 0.022 * s * bu, 0.04 * s * bu), 0.045 * s))
         sm = p["shoulder_mass"] * s
         nw = p["neck_width"] * s
@@ -384,18 +393,22 @@ class Body:
         ax = (t - h) / np.linalg.norm(t - h)
         idx_base = _v(*bones[f"{side}IndexProximal"]["head"])
         lit_base = _v(*bones[f"{side}LittleProximal"]["head"])
-        palm_c = (h + (idx_base + lit_base) * 0.5) * 0.5
         across = idx_base - lit_base
         across /= np.linalg.norm(across)
         normal = np.cross(ax, across)
         Rp = np.stack([across, normal, ax], axis=1)
         hw, fk, wk = p["hand_width"], p["finger_thickness"], p["wrist"]
-        palm_half_len = 0.5 * float(np.linalg.norm((idx_base + lit_base) * 0.5 - h))
-        # Palm: a narrow flattened slab from the wrist to the knuckles; thenar/hypothenar pads.
-        field.union(sdf.RoundBox(palm_c, _v(0.031 * hw * s, 0.0055 * s, palm_half_len * 0.76), 0.0085 * s * _mix(hw, 1.0), Rp), 0.0)
-        field.union(sdf.Capsule(h - ax * 0.012 * s, h + ax * 0.012 * s, 0.02 * wk * s), 0.012 * s)
+        knuckles = (idx_base + lit_base) * 0.5
+        # Palm: a slender, flat loft that widens gently from the wrist to the knuckles (never a square
+        # mitten on a thick wrist); a soft thenar pad at the thumb.
+        palm = PALM.copy()
+        palm[:, 1:3] *= hw * s
+        palm[:, 3:5] *= s
+        field.union(sdf.Loft(h - ax * 0.006 * s, knuckles, palm, u_hint=across, v_hint=normal, ext=(0.004 * s, 0.0),
+                             cap=(1.0, 0.7)), 0.0)
+        field.union(sdf.Capsule(h - ax * 0.014 * s, h + ax * 0.004 * s, 0.0185 * wk * s), 0.01 * s)
         thumb_mc = _v(*bones[f"{side}ThumbMetacarpal"]["head"])
-        field.union(self.E(_lerp(h, thumb_mc, 0.7) + normal * 0.004 * s, _v(0.016 * hw, 0.011, 0.022) * s, Rp), 0.01 * s)
+        field.union(self.E(_lerp(h, thumb_mc, 0.7) + normal * 0.003 * s, _v(0.012 * hw, 0.0085, 0.018) * s, Rp), 0.009 * s)
         for f in ("Thumb", "Index", "Middle", "Ring", "Little"):
             chain = [n for n in names if n.startswith(f"{side}{f}")]
             # Slender, tapering fingers (the key art's reaching hand): long, fine at the tips.
@@ -406,9 +419,9 @@ class Body:
                 r1 = base_r * (1.0 - 0.13 * (i + 1)) * (0.88 if i == len(chain) - 1 else 1.0)
                 if i == len(chain) - 1:
                     b = b + (b - a) * 0.12                     # fingertip pad past the joint
-                field.union(sdf.RoundCone(a, b, r0, r1), 0.004 * s)
+                field.union(sdf.RoundCone(a, b, r0, r1), 0.005 * s)
                 if i < len(chain) - 1:
-                    field.union(self.E(b, _v(r1 * 1.06, r1 * 1.03, r1 * 1.08)), 0.003 * s)  # knuckle
+                    field.union(self.E(b, _v(r1 * 1.03, r1 * 1.01, r1 * 1.04)), 0.004 * s)  # knuckle: a hint, not a bead
         return field
 
 

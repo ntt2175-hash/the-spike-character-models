@@ -34,7 +34,7 @@ DEFAULTS = {
     "nose": 1.0,           # nose size / projection
     "lips": 1.0,           # lip volume
     "socket": 1.0,         # eye socket depth
-    "brow": 1.0,           # brow ridge volume
+    "brow": 1.0,           # brow ridge volume above the soft brow plane (1 = none, 2 = pronounced)
     "ear": 1.0,            # ear size
 }
 
@@ -166,9 +166,12 @@ class Head:
         add(self.bump(0.0, -LOWER + 0.012, 0.0008 * p["chin"], (0.012, 0.008, 0.009)), 0.014)
         # 3. eye sockets: shallow orbital recesses so the eyes sit IN the face; a soft brow above
         for sx in (1.0, -1.0):
-            sub(self.dent(sx * ex, 0.0, 0.0007 * p["socket"], (0.022, 0.012, 0.015)), 0.016)
-            add(self.bump(sx * (ex - 0.004), 0.024, 0.0002 * p["brow"], (0.026, 0.01, 0.009)), 0.018)
-        # 4. nose: subtle bridge rising out of the face plane, small tip, soft wings, underside plane
+            # (a separate brow ridge reads as a heavy, sleepy crease in clay: the brow stays a soft plane)
+            sub(self.dent(sx * ex, -0.001, 0.0005 * p["socket"], (0.022, 0.012, 0.013)), 0.02)
+            if p["brow"] > 1.0:
+                add(self.bump(sx * (ex - 0.004), 0.024, 0.0002 * (p["brow"] - 1.0), (0.026, 0.01, 0.009)), 0.018)
+        # 4. nose: subtle bridge rising out of the face plane, small tip, soft wings (no underside cut: in toon
+        #    shading it reads as a gray patch over the lip)
         n = p["nose"]
         tip_dz = -0.0285
         bridge_top = self.on(0.0, -0.007, -0.0019 * s)
@@ -179,13 +182,12 @@ class Head:
         add(self.bump(0.0, tip_dz, 0.0052 * n, (0.0047 * n, 0.0042 * n, 0.0040 * n)), 0.006)
         for sx in (1.0, -1.0):
             add(self.bump(sx * 0.0043 * n, tip_dz - 0.0018, 0.0022 * n, (0.0026, 0.0024, 0.0022)), 0.004)
-        sub(self.dent(0.0, tip_dz - 0.0056, 0.0006, (0.006, 0.006, 0.0017)), 0.003)
         # 5. lips and mouth: small, with volume, set into the lower face (not stuck on)
         m_dz = -0.0502
         L = p["lips"]
-        add(self.bump(0.0, m_dz + 0.0032, 0.0006 * L, (0.0092, 0.0036, 0.0028 * L)), 0.008)
-        add(self.bump(0.0, m_dz - 0.0042, 0.0008 * L, (0.0078, 0.0038, 0.0032 * L)), 0.008)
-        sub(self.dent(0.0, m_dz, 0.0005, (0.0058, 0.0045, 0.0022)), 0.004)
+        add(self.bump(0.0, m_dz + 0.0032, 0.0006 * L, (0.0105, 0.0036, 0.0028 * L)), 0.008)
+        add(self.bump(0.0, m_dz - 0.0042, 0.0008 * L, (0.0088, 0.0038, 0.0032 * L)), 0.008)
+        sub(self.dent(0.0, m_dz, 0.0005, (0.0082, 0.0045, 0.0022)), 0.004)
         # 6. ears: helix body tilted back, lobe, concha; between the eye line and the nose base
         e = p["ear"]
         R = sdf.rotation_to(_v(0.0, 0.2, 0.98))

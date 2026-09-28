@@ -146,10 +146,10 @@ def portrait(rig):
     left leg, her right hand raised to the collarbone (elbow low beside the waist), the left arm behind
     her back, the head turned a little toward her right and tilted toward her left."""
     stand(rig)
-    aim(rig, "RightUpperArm", (-0.1, -0.1, -1.0))
-    aim(rig, "RightLowerArm", (0.55, -0.4, 0.74))
-    aim(rig, "RightHand", (0.3, -0.3, 0.9), twist_deg=-70)
-    curl_fingers(rig, "Right", 18, thumb_deg=8)
+    aim(rig, "RightUpperArm", (-0.12, -0.22, -1.0))
+    aim(rig, "RightLowerArm", (0.16, -0.42, 0.89))
+    aim(rig, "RightHand", (0.8, -0.12, 0.58), twist_deg=20)      # fingertips at the collarbone, toward her left
+    curl_fingers(rig, "Right", 14, thumb_deg=6)
     aim(rig, "LeftUpperArm", (0.08, 0.14, -1.0))
     aim(rig, "LeftLowerArm", (-0.4, 0.45, -0.8))
     aim(rig, "LeftHand", (-0.6, 0.3, -0.7), twist_deg=20)

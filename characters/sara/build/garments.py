@@ -72,7 +72,7 @@ def jersey_field(bones, voxel=0.0022):
         yf_j = min(yf - 0.007 * sc, hang_f) if z < z_apex else yf - 0.007 * sc
         yb_j = max(yb + 0.007 * sc, float(np.interp(z_scap, rows[:, 0], rows[:, 3])) + 0.004 * sc - 0.06 * max(0.0, z_scap - z))
         k_hem = 1.0 - min(1.0, (z - hem) / (0.12 * sc)) if z > hem else 1.0
-        w_j = max(w + 0.007 * sc, (w_chest - 0.006 * sc + 0.008 * sc * k_hem) if z < m.tz(0.75) else w + 0.007 * sc)
+        w_j = max(w + 0.007 * sc, (w_chest - 0.006 * sc + 0.014 * sc * k_hem) if z < m.tz(0.75) else w + 0.007 * sc)   # A-line flare
         drape.append((z, w_j, yf_j, yb_j, 2.1, 2.2))
     f = sdf.Field(_v(-0.2, -0.18, hem - 0.09), _v(0.2, 0.16, lm["neck_z"] + 0.1), voxel)
     for prim, k in bodymod.torso_parts(bones):
@@ -84,6 +84,12 @@ def jersey_field(bones, voxel=0.0022):
     shorts_outer.union(bodymod.torso_parts(bones)[0][0], 0.0)          # the torso loft, below the waistband
     shorts_outer.intersect(sdf.HalfSpace(_v(0.0, 0.0, lm["waistband_z"] + 0.02 * sc), _v(0.0, 0.0, 1.0)), 0.02 * sc)
     shorts_outer.offset(0.012)
+    # The hem falls just below the hip joints (front reference): cover the tops of the thighs (and the
+    # shorts on them) so nothing pokes through where the pelvis narrows into the crotch.
+    tt = m.p["thigh_thickness"]
+    for side in ("Left", "Right"):
+        hip, knee = _bone(bones, f"{side}UpperLeg")
+        shorts_outer.union(sdf.RoundCone(hip + _v(0, 0, 0.02), hip + (knee - hip) * 0.22, 0.1 * tt * sc, 0.094 * tt * sc), 0.04 * sc)
     f.union_field(shorts_outer, 0.02 * sc)
     f.drape(0.003 * sc, grow=0.0006 * sc)         # fabric bridges small creases (armpit, sternum, spine)
     return f

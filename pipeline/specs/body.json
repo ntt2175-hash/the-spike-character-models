@@ -19,7 +19,7 @@
   "shape_params": {
     "torso_width":       {"range": [0.7, 1.3],  "desc": "Rib cage, upper chest and back width."},
     "torso_depth":       {"range": [0.7, 1.3],  "desc": "Rib cage and upper chest depth (side profile)."},
-    "bust":              {"range": [0.5, 1.4],  "desc": "Chest volume. Keep subtle for slender athletic designs."},
+    "bust":              {"range": [0.5, 1.6],  "desc": "Chest volume (follow the design art: slender does not mean flat)."},
     "waist_width":       {"range": [0.7, 1.2],  "desc": "Waist width. Stylize, do not exaggerate into an hourglass."},
     "waist_depth":       {"range": [0.7, 1.2],  "desc": "Waist depth."},
     "pelvis_width":      {"range": [0.7, 1.2],  "desc": "Pelvis and outer hip width."},

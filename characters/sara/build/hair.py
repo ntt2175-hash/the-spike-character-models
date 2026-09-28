@@ -417,8 +417,9 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
              sc.keep_out(hp(-0.095, -0.028, -0.004), 0.013),
              sc.keep_out(hp(-0.103, -0.033, -0.052), 0.015),
              _v(-0.102, -0.036, 1.43),
-             _v(-0.094, -0.047, 1.37),
-             _v(-0.083, -0.06, 1.322)]
+             _v(-0.096, -0.048, 1.37),
+             _v(-0.088, -0.064, 1.315),
+             _v(-0.08, -0.08, 1.262)]            # falls in front of the shoulder to the chest (front reference)
     add(right, 0.034 * HS, 0.0066, "side_R", free_at=1, tip_start=0.55, tip_power=0.7, root_min=0.85, crescent=0.26,
         twist_deg=14, outward=_v(-0.45, -1.0, 0.0))
     paths[("hair_side_A", "R")] = (right[1:], 5)

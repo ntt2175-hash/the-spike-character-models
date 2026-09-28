@@ -57,7 +57,7 @@
     "shoulder_width": 0.72,
     "hip_width": 0.76,
     "arm_length": 1.03,
-    "hand_scale": 1.1,
+    "hand_scale": 0.95,
     "foot_scale": 0.88,
     "confidence": {
       "height_m": "low (no canon source)",
@@ -71,23 +71,23 @@
     "body_notes": [
       "Slender, long-limbed, lightweight anime volleyball athlete: the silhouette is long lines, not muscle volume.",
       "Long legs with slim thighs (clean taper to a small knee), slender calves and narrow ankles; small feet.",
-      "Narrow torso and shoulders, subtle chest, clean waist without an hourglass; narrow pelvis.",
+      "Narrow torso and shoulders, a full chest as in the 2D art (design owner: it is not small or flat), clean waist without an exaggerated hourglass; full thighs.",
       "Long slim arms tapering to narrow wrists; slender hands with long fingers. The hand is a hero element of her pose."
     ]
   },
   "body_shape": {
     "note": "Volume multipliers on the body master's reference body (1.0 = realistic athletic 1.66 m woman; ranges in pipeline/specs/body.json). Sara: slender, long-limbed, lightweight anime volleyball athlete; athleticism from length, posture and motion, not muscle volume. Moderately narrow, delicate shoulders; slender torso with a gradual rib-to-waist-to-pelvis transition (never pinched, never an hourglass); one coherent pelvis volume (depth follows width); slim but athletic thighs; small, structurally readable knees; slim calves with a controlled taper; ankles clearly narrower than the calves; segmented arms (deltoid, elbow, forearm belly, wrist); compact feet with an arch. Proportion-pass feedback: not thinner, better distributed.",
-    "torso_width": 0.9, "torso_depth": 1.0, "bust": 1.18, "waist_width": 0.93, "waist_depth": 0.98,
+    "torso_width": 0.9, "torso_depth": 1.0, "bust": 1.42, "waist_width": 0.93, "waist_depth": 0.98,
     "pelvis_width": 0.92, "pelvis_depth": 1.05, "glute": 0.97, "neck_width": 1.0,
     "shoulder_mass": 0.8, "deltoid": 0.88, "arm_thickness": 0.92, "forearm_thickness": 0.92, "wrist": 0.94,
-    "thigh_thickness": 0.92, "thigh_outer": 0.45, "thigh_inner": 0.6, "knee_size": 0.88,
+    "thigh_thickness": 0.96, "thigh_outer": 0.45, "thigh_inner": 0.68, "knee_size": 0.88,
     "calf_thickness": 0.97, "ankle": 0.9, "foot_width": 0.84, "hand_width": 1.0, "finger_thickness": 1.0
   },
   "head_shape": {
     "note": "Multipliers on the head master's reference anime head (pipeline/blender/spike_pipeline/modeling/head_master.py; ranges in pipeline/specs/body.json). Sara (front reference sara_standing_front34.png): slender soft oval, a gently convex jaw line into a small, softly pointed chin (never a straight V, never round jowls), subtle midface cheek volume, a small nose with a real bridge and tip that reads in 3/4, a small mouth with lip volume set into the lower face, a round cranium.",
     "width": 1.0, "depth": 1.0, "cranium": 1.0, "face_length": 1.0,
     "cheek": 1.0, "jaw": 1.0, "jaw_round": 1.0, "chin": 1.0,
-    "nose": 1.0, "lips": 1.0, "socket": 1.0, "brow": 1.0, "ear": 1.0
+    "nose": 0.85, "lips": 1.0, "socket": 1.0, "brow": 1.0, "ear": 1.0
   },
   "palette": {
     "note": "Sampled from the key art (297x673 JPEG) and the 1918x820 cut-in video frame, then corrected for compression and lighting. Iris colors follow the in-game close-up (reference video 0.0-2.8 s), which the design owner chose as the eye quality target. Re-sample from the original source art when it is available.",
@@ -111,8 +111,8 @@
     "sclera": "#f5f4fa",
     "ribbon": "#6fa3e0",
     "hair_tie": "#334158",
-    "jersey_front_top": "#223856",
-    "jersey_front_bottom": "#90bacf",
+    "jersey_front_top": "#1e3563",
+    "jersey_front_bottom": "#a3d6ec",
     "jersey_side": "#eef0f5",
     "jersey_piping": "#2f5fc8",
     "jersey_print": "#e8f4fa",
@@ -180,12 +180,12 @@
   "secondary_chains": {
     "note": "Chains the rig builder creates and the Godot SpringBoneSimulator3D simulates. root/direction are normalized to height in Blender space (Z up, character faces -Y, +X = her left). length is a fraction of height. Spring values are SpringBoneSimulator3D settings.",
     "chains": [
-      {"id": "hair_bang_C", "parent": "Head", "bones": 3, "root": [-0.0194, -0.0483, 0.9703], "direction": [0.017, -0.355, -0.935], "length": 0.043, "curve_deg": 0, "points": [[-0.0194, -0.0483, 0.9703], [-0.0191, -0.0535, 0.9569], [-0.0194, -0.0593, 0.9438], [-0.0217, -0.0554, 0.9302]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
-      {"id": "hair_bang_B", "parent": "Head", "bones": 3, "root": [0.0026, -0.0498, 0.9723], "direction": [-0.018, -0.367, -0.93], "length": 0.0407, "curve_deg": 0, "points": [[0.0026, -0.0498, 0.9723], [0.0023, -0.0548, 0.9596], [0.0017, -0.0586, 0.9466], [0.0, -0.0581, 0.9332]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
-      {"id": "hair_bang_A", "parent": "Head", "bones": 3, "root": [0.0243, -0.0469, 0.9698], "direction": [-0.045, -0.356, -0.933], "length": 0.0383, "curve_deg": 0, "points": [[0.0243, -0.0469, 0.9698], [0.0237, -0.0515, 0.9578], [0.0232, -0.0574, 0.9465], [0.0241, -0.0568, 0.9339]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_bang_C", "parent": "Head", "bones": 3, "root": [-0.0194, -0.0483, 0.9703], "direction": [0.018, -0.36, -0.933], "length": 0.042, "curve_deg": 0, "points": [[-0.0194, -0.0483, 0.9703], [-0.0191, -0.0534, 0.9572], [-0.0195, -0.0566, 0.9436], [-0.0217, -0.0532, 0.9302]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_bang_B", "parent": "Head", "bones": 3, "root": [0.0026, -0.0498, 0.9723], "direction": [-0.018, -0.37, -0.929], "length": 0.0405, "curve_deg": 0, "points": [[0.0026, -0.0498, 0.9723], [0.0023, -0.0548, 0.9597], [0.0017, -0.0578, 0.9466], [0.0, -0.0576, 0.9332]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_bang_A", "parent": "Head", "bones": 3, "root": [0.0243, -0.0469, 0.9698], "direction": [-0.045, -0.368, -0.929], "length": 0.0373, "curve_deg": 0, "points": [[0.0243, -0.0469, 0.9698], [0.0237, -0.0515, 0.9582], [0.0232, -0.0548, 0.9462], [0.0241, -0.0534, 0.9339]], "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "hair_side_A", "parent": "Head", "bones": 4, "side": "L", "root": [0.0637, -0.0164, 0.924], "direction": [0.228, -0.189, -0.955], "length": 0.0758, "curve_deg": 0, "points": [[0.0637, -0.0164, 0.924], [0.0682, -0.0201, 0.9051], [0.0679, -0.0259, 0.8862], [0.0608, -0.0349, 0.8704], [0.0472, -0.0433, 0.8755]], "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "hair_side_B", "parent": "Head", "bones": 5, "side": "L", "root": [0.0656, 0.023, 0.9017], "direction": [0.031, -0.454, -0.89], "length": 0.1762, "curve_deg": 0, "points": [[0.0656, 0.023, 0.9017], [0.0667, 0.007, 0.8703], [0.0713, -0.0093, 0.8394], [0.0759, -0.0241, 0.8077], [0.077, -0.0358, 0.7745], [0.0729, -0.0458, 0.741]], "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
-      {"id": "hair_side_A", "parent": "Head", "bones": 5, "side": "R", "root": [-0.0623, -0.019, 0.9188], "direction": [-0.19, -0.11, -0.976], "length": 0.1262, "curve_deg": 0, "points": [[-0.0623, -0.019, 0.9188], [-0.0672, -0.0218, 0.8941], [-0.0634, -0.0215, 0.8694], [-0.0592, -0.0243, 0.8447], [-0.0556, -0.0295, 0.8202], [-0.05, -0.0361, 0.7964]], "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_side_A", "parent": "Head", "bones": 5, "side": "R", "root": [-0.0623, -0.019, 0.9188], "direction": [-0.159, -0.101, -0.982], "length": 0.1642, "curve_deg": 0, "points": [[-0.0623, -0.019, 0.9188], [-0.0676, -0.0223, 0.8866], [-0.0606, -0.0226, 0.8546], [-0.0575, -0.0296, 0.8226], [-0.0529, -0.0388, 0.7914], [-0.0482, -0.0482, 0.7602]], "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "hair_ponytail_A", "parent": "Head", "bones": 8, "root": [0.0407, 0.0289, 0.9893], "direction": [0.374, 0.911, -0.176], "length": 0.3533, "curve_deg": 0, "points": [[0.0407, 0.0289, 0.9893], [0.0554, 0.0647, 0.9824], [0.0621, 0.0815, 0.9415], [0.0616, 0.0881, 0.8972], [0.0574, 0.0881, 0.8525], [0.0502, 0.0826, 0.8085], [0.0413, 0.0768, 0.7649], [0.0341, 0.0724, 0.7208], [0.0311, 0.071, 0.676]], "stiffness": 0.9, "drag": 0.35, "gravity": 0.6, "radius": 0.022, "wind_response": 1.0, "keep_at_lod1": true, "keep_at_lod2": true},
       {"id": "hair_ponytail_B", "parent": "Head", "bones": 6, "root": [0.0407, 0.0289, 0.9893], "direction": [0.367, 0.884, -0.29], "length": 0.3049, "curve_deg": 0, "points": [[0.0407, 0.0289, 0.9893], [0.0571, 0.0683, 0.9763], [0.0632, 0.0848, 0.9275], [0.0664, 0.0926, 0.8761], [0.0679, 0.0926, 0.8241], [0.0669, 0.0906, 0.772], [0.0656, 0.0893, 0.7199]], "stiffness": 1.0, "drag": 0.35, "gravity": 0.6, "radius": 0.018, "wind_response": 1.1, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "hair_ponytail_C", "parent": "Head", "bones": 6, "root": [0.0407, 0.0289, 0.9893], "direction": [0.372, 0.903, -0.213], "length": 0.276, "curve_deg": 0, "points": [[0.0407, 0.0289, 0.9893], [0.056, 0.0659, 0.9806], [0.062, 0.0826, 0.9373], [0.0567, 0.0902, 0.8912], [0.0439, 0.0912, 0.846], [0.0271, 0.0882, 0.8021], [0.0095, 0.0847, 0.7585]], "stiffness": 1.1, "drag": 0.35, "gravity": 0.6, "radius": 0.016, "wind_response": 1.1, "keep_at_lod1": false, "keep_at_lod2": false},
@@ -196,10 +196,10 @@
       {"id": "ribbon_loop_A", "parent": "Head", "bones": 3, "root": [0.045, 0.0311, 0.9979], "direction": [0.037, 0.051, 0.998], "length": 0.0734, "curve_deg": 0, "points": [[0.045, 0.0311, 0.9979], [0.0459, 0.0324, 1.0223], [0.0432, 0.0298, 1.0464], [0.04, 0.0265, 1.0705]], "stiffness": 3.8, "drag": 0.7, "gravity": 0.0, "radius": 0.006, "wind_response": 0.2, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "ribbon_tail_A", "parent": "Head", "bones": 4, "root": [0.045, 0.0311, 0.9979], "direction": [-0.336, 0.933, -0.128], "length": 0.1704, "curve_deg": 0, "points": [[0.045, 0.0311, 0.9979], [0.031, 0.07, 0.9925], [0.0314, 0.091, 0.9555], [0.0271, 0.098, 0.9132], [0.0285, 0.102, 0.8704]], "stiffness": 0.5, "drag": 0.25, "gravity": 0.4, "radius": 0.005, "wind_response": 1.3, "keep_at_lod1": true, "keep_at_lod2": false},
       {"id": "ribbon_tail_B", "parent": "Head", "bones": 3, "root": [0.045, 0.0311, 0.9979], "direction": [0.614, 0.788, 0.038], "length": 0.0874, "curve_deg": 0, "points": [[0.045, 0.0311, 0.9979], [0.0631, 0.0544, 0.999], [0.0795, 0.0722, 0.9842], [0.0866, 0.0853, 0.9587]], "stiffness": 0.5, "drag": 0.25, "gravity": 0.4, "radius": 0.005, "wind_response": 1.3, "keep_at_lod1": false, "keep_at_lod2": false},
-      {"id": "cloth_jersey_F", "parent": "Spine", "bones": 2, "root": [0.0, -0.055, 0.619], "direction": [0.0, -0.15, -0.99], "length": 0.06, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
-      {"id": "cloth_jersey_B", "parent": "Spine", "bones": 2, "root": [0.0, 0.052, 0.619], "direction": [0.0, 0.15, -0.99], "length": 0.06, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
-      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "L", "root": [0.075, 0.0, 0.619], "direction": [0.15, 0.0, -0.99], "length": 0.058, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false},
-      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "R", "root": [-0.075, 0.0, 0.619], "direction": [-0.15, 0.0, -0.99], "length": 0.058, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false}
+      {"id": "cloth_jersey_F", "parent": "Spine", "bones": 2, "root": [0.0, -0.055, 0.6], "direction": [0.0, -0.15, -0.99], "length": 0.05, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "cloth_jersey_B", "parent": "Spine", "bones": 2, "root": [0.0, 0.052, 0.6], "direction": [0.0, 0.15, -0.99], "length": 0.05, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "L", "root": [0.075, 0.0, 0.6], "direction": [0.15, 0.0, -0.99], "length": 0.048, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "R", "root": [-0.075, 0.0, 0.6], "direction": [-0.15, 0.0, -0.99], "length": 0.048, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false}
     ],
     "colliders": [
       {"bone": "Head",          "shape": "sphere",  "along": 0.42, "radius_rel": 0.056, "affects": ["hair", "ribbon"]},

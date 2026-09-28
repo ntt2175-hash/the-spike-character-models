@@ -41,8 +41,10 @@ def paint_jersey(path, pal, px=2048):
     H = (JERSEY_Z1 - JERSEY_Z0) * 1000
     k = H / _REF_JERSEY_MM
     c = paint.Canvas(1000, H, px, (0, 0), supersample=2, background=(*paint.hex_rgb(pal["jersey_front_top"]), 1.0))
-    # Front/back body: vertical gradient, dark at the chest to pale at the hem (front brighter than back).
-    grad_front = c.vertical_gradient(430 * k, 60 * k, pal["jersey_front_top"], pal["jersey_front_bottom"])
+    # Front/back body: vertical gradient, navy through the chest print to pale cyan at the hem (front
+    # reference: the lower third of the front is light), the back darker.
+    cz = (CHEST_Z - JERSEY_Z0) * 1000
+    grad_front = c.vertical_gradient(cz - 105 * k, 95, pal["jersey_front_top"], pal["jersey_front_bottom"])
     grad_back = c.vertical_gradient(430 * k, 60 * k, "#1c3050", "#5f8aa8")
     X, Y = c.grid_mm()
     front = ((X > 300) & (X < 700)).astype(np.float32)
@@ -91,7 +93,6 @@ def paint_jersey(path, pal, px=2048):
     ring = [(575 + 1.25 * 44 * math.cos(t), 205 * k + 44 * k * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 60)]
     c.paint(c.mask_stroke(ring, [1.6] * len(ring), blur_mm=0.25) * front, "#ffffff", 0.8)
     # Chest: the team wordmark across the bust line, the number centered below it, a crest on her left chest.
-    cz = (CHEST_Z - JERSEY_Z0) * 1000
     c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=5, stroke_color="#a9c9e6")
     c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=2.2, stroke_color="#13254a")
     c.text("2", 500, cz - 62 * k, 125 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
