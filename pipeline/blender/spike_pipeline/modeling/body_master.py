@@ -56,18 +56,18 @@ TORSO = np.array([                           # rounded sections (exponent ~2): a
     (0.37, 0.110, -0.073, 0.086, 2.0, 2.2),    # natural waist: a gradual inflection, a mild lumbar curve
     (0.45, 0.111, -0.075, 0.091, 2.0, 2.2),    # upper abdomen, just under the ribcage
     (0.52, 0.114, -0.079, 0.097, 2.0, 2.3),
-    (0.59, 0.118, -0.084, 0.102, 2.0, 2.3),    # lower ribs: the barrel has real depth
-    (0.66, 0.122, -0.088, 0.105, 2.0, 2.4),    # chest line / sternum
-    (0.73, 0.125, -0.087, 0.105, 2.1, 2.4),
-    (0.80, 0.125, -0.081, 0.102, 2.1, 2.4),
-    (0.86, 0.116, -0.071, 0.095, 2.1, 2.3),    # armpit / upper chest
+    (0.59, 0.118, -0.083, 0.102, 2.0, 2.3),    # lower ribs: the barrel has real depth
+    (0.66, 0.122, -0.084, 0.105, 2.0, 2.4),    # chest line / sternum (the chest forms sit on it)
+    (0.73, 0.125, -0.084, 0.105, 2.1, 2.4),
+    (0.80, 0.125, -0.082, 0.102, 2.1, 2.4),
+    (0.86, 0.116, -0.074, 0.095, 2.1, 2.3),    # armpit / upper chest: fills smoothly into the chest
     (0.93, 0.088, -0.052, 0.079, 2.0, 2.2),    # shoulder slope
     (1.00, 0.055, -0.034, 0.060, 2.0, 2.0),    # neck base
 ])
 THIGH = np.array([                           # forms peak at different heights: quads front, hamstrings back, outer sweep
-    (0.00, 0.078, 0.074, 0.080, 0.084),
-    (0.10, 0.080, 0.076, 0.083, 0.086),        # widest at the trochanter
-    (0.25, 0.079, 0.074, 0.084, 0.084),        # hamstring mass behind
+    (0.00, 0.072, 0.072, 0.080, 0.084),
+    (0.10, 0.075, 0.075, 0.083, 0.086),        # trochanter: the hip line stays controlled
+    (0.25, 0.077, 0.074, 0.084, 0.084),        # outer sweep peaks lower, hamstring mass behind
     (0.40, 0.075, 0.068, 0.084, 0.078),        # rectus femoris: the front line stays full longer
     (0.55, 0.069, 0.062, 0.078, 0.070),
     (0.70, 0.062, 0.057, 0.068, 0.061),
@@ -105,13 +105,13 @@ FOREARM = np.array([                           # out/in = back of hand / palm; f
     (1.00, 0.020, 0.019, 0.026, 0.025),
 ])
 FOOT = np.array([                              # heel -> toe tip; out, in, top (dorsal), bottom (plantar)
-    (0.00, 0.022, 0.022, 0.024, 0.024),        # compact rounded heel
-    (0.14, 0.026, 0.026, 0.044, 0.025),        # heel / ankle: the top rises steeply into the ankle
+    (0.00, 0.019, 0.019, 0.023, 0.023),        # narrow, compact rounded heel
+    (0.14, 0.024, 0.024, 0.044, 0.024),        # heel / ankle: the top rises steeply into the ankle
     (0.32, 0.028, 0.031, 0.046, 0.017),        # arch: the sole lifts off the ground, high instep
     (0.52, 0.033, 0.036, 0.033, 0.015),        # instep slopes down to the metatarsals
     (0.72, 0.038, 0.040, 0.021, 0.016),        # ball of the foot (widest, on the ground)
-    (0.88, 0.034, 0.036, 0.016, 0.013),        # toes
-    (1.00, 0.026, 0.028, 0.011, 0.010),        # rounded toe box
+    (0.88, 0.032, 0.034, 0.015, 0.012),        # toes: a compact forefoot
+    (1.00, 0.023, 0.025, 0.010, 0.009),        # rounded toe tip
 ])
 
 
@@ -176,7 +176,24 @@ class Body:
         rows = []
         for (f, w, yf, yb, nf, nb), a_, b_, g_ in zip(TORSO, wm, dm, gm):
             rows.append((self.tz(f), w * s * a_, yf * s * b_, yb * s * b_ * g_, nf, nb))
+        self._torso_rows = np.asarray(rows)
         return sdf.ZLoft(rows)
+
+    def torso_rows(self):
+        """Torso sections (z, half width, y front, y back, n front, n back) in meters (for garments)."""
+        if not hasattr(self, "_torso_rows"):
+            self._torso_loft()
+        return self._torso_rows
+
+    def bust_apex(self):
+        """(z, y) of the chest's most forward point (garments hang from it)."""
+        p, s = self.p, self.s
+        c = self._bust_center()
+        return c[2] - 0.01 * s, c[1] + 0.004 * s - 0.04 * s * p["bust"]
+
+    def _bust_center(self):
+        p, s = self.p, self.s
+        return _v(0.052 * s * p["torso_width"], -0.057 * s * p["torso_depth"], self.tz(0.655))
 
     def _thigh_rows(self):
         p = self.p
@@ -200,9 +217,13 @@ class Body:
         for sx in (1.0, -1.0):   # glute lobes: real rear volume with a soft cleft and a curved lower line
             parts.append((self.E(_v(sx * 0.052 * s * pw, 0.058 * s * pd * gl, self.tz(-0.04)),
                                  _v(0.064 * pw, 0.05 * pd * gl, 0.078 * self.kt) * s), 0.045 * s))
-        for sx in (1.0, -1.0):   # chest: subtle
-            parts.append((self.E(_v(sx * 0.052 * s * tw, -0.056 * s * td, self.tz(0.665)), _v(0.048, 0.036, 0.048 * self.kt) * s * bu),
-                          0.05 * s))
+        bc = self._bust_center()
+        for sx in (1.0, -1.0):
+            # Chest: one teardrop per side - a tapered slope from the upper chest into a rounder lower mass,
+            # angled slightly outward, with a natural valley between. Smooth, never a disc or a shelf.
+            top = _v(sx * 0.047 * s * tw, bc[1] + 0.016 * s, self.tz(0.75))
+            low = _v(sx * (bc[0] + 0.004 * s), bc[1] + 0.004 * s, bc[2] - 0.01 * s)
+            parts.append((sdf.RoundCone(top, low, 0.022 * s * bu, 0.04 * s * bu), 0.045 * s))
         sm = p["shoulder_mass"] * s
         nw = p["neck_width"] * s
         for sh, ua, sx in ((sh_l, ua_l, 1.0), (sh_r, ua_r, -1.0)):
@@ -212,7 +233,7 @@ class Body:
                                         0.036 * sm, 0.034 * sm), 0.045 * s))
             # (a subtle ridge riding just on the upper-chest surface, rising slightly toward the shoulder)
             parts.append((sdf.RoundCone(_v(sx * 0.02 * nw, -0.036 * s * td, nz - 0.014 * s),
-                                        ua + _v(-sx * 0.024, -0.016, 0.02) * s, 0.0062 * s, 0.0072 * s), 0.02 * s))
+                                        ua + _v(-sx * 0.024, -0.014, 0.02) * s, 0.0042 * s, 0.005 * s), 0.026 * s))
             # (starts high on the neck and is fuller at the base: a short visible neck and a soft neck-to-
             # shoulder transition, never a thin mannequin neck)
             parts.append((sdf.RoundCone(_v(sx * 0.016 * nw, 0.03 * s, nz + 0.058 * s), _lerp(sh, ua, 0.72) + _v(0, 0.0137, 0.0214) * s,
@@ -377,11 +398,12 @@ class Body:
         field.union(self.E(_lerp(h, thumb_mc, 0.7) + normal * 0.004 * s, _v(0.016 * hw, 0.011, 0.022) * s, Rp), 0.01 * s)
         for f in ("Thumb", "Index", "Middle", "Ring", "Little"):
             chain = [n for n in names if n.startswith(f"{side}{f}")]
-            base_r = (0.0082 if f == "Thumb" else {"Index": 0.0068, "Middle": 0.007, "Ring": 0.0066, "Little": 0.0057}[f]) * fk * s
+            # Slender, tapering fingers (the key art's reaching hand): long, fine at the tips.
+            base_r = (0.0076 if f == "Thumb" else {"Index": 0.0062, "Middle": 0.0064, "Ring": 0.006, "Little": 0.0052}[f]) * fk * s
             for i, n in enumerate(chain):
                 a, b = _v(*bones[n]["head"]), _v(*bones[n]["tail"])
-                r0 = base_r * (1.0 - 0.12 * i)                 # elegant taper toward the tip
-                r1 = base_r * (1.0 - 0.12 * (i + 1)) * (0.9 if i == len(chain) - 1 else 1.0)
+                r0 = base_r * (1.0 - 0.13 * i)                 # elegant taper toward the tip
+                r1 = base_r * (1.0 - 0.13 * (i + 1)) * (0.88 if i == len(chain) - 1 else 1.0)
                 if i == len(chain) - 1:
                     b = b + (b - a) * 0.12                     # fingertip pad past the joint
                 field.union(sdf.RoundCone(a, b, r0, r1), 0.004 * s)

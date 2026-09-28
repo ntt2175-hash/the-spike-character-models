@@ -366,12 +366,21 @@ def apply_proportions(bones: list[dict], proportions: dict) -> list[dict]:
             leg_ratio = dst[1] / src[1]
 
             ankle_z = by_name["LeftLowerLeg"]["tail"][2]
+            knee_src = by_name["LeftLowerLeg"]["head"][2]
             hip_src = r["head"][2]
-            leg_k = (hip_src * leg_ratio - ankle_z) / (hip_src - ankle_z)
+            hip_dst = hip_src * leg_ratio
+            ratio = proportions.get("thigh_to_shin")
+            if ratio:
+                knee_dst = ankle_z + (hip_dst - ankle_z) / (1.0 + float(ratio))
+            else:
+                knee_dst = ankle_z + (knee_src - ankle_z) * (hip_dst - ankle_z) / (hip_src - ankle_z)
 
-            def g(p, r=r, ankle_z=ankle_z, leg_k=leg_k):
-                # Longer legs lengthen the thigh and shin; the ankle and foot keep their anatomical height.
-                z = ankle_z + (p[2] - ankle_z) * leg_k if p[2] >= ankle_z else p[2]
+            def g(p, r=r, ankle_z=ankle_z, knee_src=knee_src, hip_src=hip_src, knee_dst=knee_dst, hip_dst=hip_dst):
+                # Longer legs lengthen the thigh and shin (split by thigh_to_shin); the ankle and foot keep
+                # their anatomical height.
+                z = p[2]
+                if z >= ankle_z:
+                    z = float(_piecewise(z, [ankle_z, knee_src, hip_src], [ankle_z, knee_dst, hip_dst]))
                 return [r["head"][0] * hip_w + (p[0] - r["head"][0]), p[1], z]
             head, tail = g(b["head"]), g(b["tail"])
             if b["name"].endswith(("Foot", "Toes")) or b["name"].startswith("socket_foot"):

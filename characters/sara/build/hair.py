@@ -3,15 +3,17 @@
 Primary masses (silhouette first)
   skull volume : the whole top and back are pulled up into a HIGH tie behind her left crown, so the
                  head reads round and full with a visible gathered ridge, never a helmet
-  fringe       : three big clumps parted slightly left of center, a long pointed lock between the
-                 eyes, side locks that frame the outer eye corners, and shorter locks behind them
-  side framing : a hooked lock that curls in under her left cheekbone, a long mass behind her left
-                 ear falling in front of the shoulder to the chest, and a long lock on her right to
-                 the collarbone (the asymmetry of the art)
+  fringe       : one mass parted left of center, cut into pointed locks of varied length that sweep
+                 away from the part (toward the eyes and sideways), long locks over the upper lids and
+                 between the eyes, outer locks framing the eye corners; broad clumps layered on top
+                 give it depth (varied, asymmetric, directional: never a comb or a helmet edge)
+  side framing : a wide hooked lock that bows out off her left cheek and curls in under it, a long
+                 mass behind her left ear falling in front of the shoulder to the chest, and a longer,
+                 straighter lock on her right to the collarbone (the asymmetry of the art)
   ponytail     : a long, thick S-curve that lifts out of the tie in a root puff and splits into three
                  sub-masses (A/B/C) after the first quarter; tips separate and drift
 Secondary: two thin crown braids running into the tie, layering, nape wisps.
-Tertiary : ahoge curl, two fine strands across the upper eye, temple flyaways (LOD0 only).
+Tertiary : ahoge curl, temple flyaways (LOD0 only). Every fringe lock grows out of the mass: no strays mid-forehead.
 Ornaments: a thin sky-blue satin ribbon (tall wire-like loop that bends over the top, a long tail laid
            over the head that falls behind her right ear, a short tail), a cross-shaped clip on her right.
 
@@ -43,23 +45,13 @@ def _n(v):
 
 
 class Scalp:
-    def __init__(self, profile):
-        self.p = profile
+    """The real head (head master distance field): the hairline and every lock follow the skull."""
+
+    def __init__(self, head):
+        self.f = head.field()
 
     def inside(self, q, margin=0.0):
-        p = self.p
-        t = p.t_of(q[2])
-        if t <= 0.0 or t >= 1.0:
-            return False
-        w = np.interp(t, p.t, p.w) + margin
-        yw = np.interp(t, p.t, p.yw)
-        if q[1] < yw:
-            d = yw - np.interp(t, p.t, p.yf) + margin
-            n = np.interp(t, p.t, p.nf)
-        else:
-            d = np.interp(t, p.t, p.yb) - yw + margin
-            n = np.interp(t, p.t, p.nb)
-        return abs(q[0] / w) ** n + abs((q[1] - yw) / d) ** n <= 1.0
+        return float(self.f.sample_at(np.asarray(q, dtype=np.float64)[None, :])[0]) < margin
 
     def surface(self, direction, lift=0.0):
         d = _n(direction)
@@ -222,8 +214,7 @@ def _pony_out(spine):
 # build
 # ---------------------------------------------------------------------------
 def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
-    prof = headmod.profile()
-    sc = Scalp(prof)
+    sc = Scalp(headmod.HEAD)
     T = tie_point(sc)
     tie_n = sc.outward(T)
     subs = sub_spines(T)
@@ -240,7 +231,8 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
         return points
 
     def front_y(x, z, gap):
-        return prof.front_y(x, prof.t_of(z)) - gap
+        y = headmod.front_y(x, z)
+        return (y if y is not None else headmod.AXIS_Y - 0.03) - gap
 
     # --- 1. skull volume: every lock from the hairline over the scalp into the tie ----------------------
     def to_tie(start, width, lifts, thick=0.0075, tag="top"):
@@ -286,18 +278,24 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
                 side = _n(np.cross(Tn[i], nrm))
                 a = 2 * math.pi * turns * u + ph
                 taper = 1.0 - 0.3 * u
-                pts.append(c + side * (0.0049 * math.sin(a) * taper) + nrm * (0.0023 * math.sin(2 * a) * taper))
-            add(pts, 0.0096, 0.0052, "braid", samples=4, tip_start=0.94, root_min=0.6, crescent=0.05)
+                pts.append(c + side * (0.0042 * math.sin(a) * taper) + nrm * (0.0019 * math.sin(2 * a) * taper))
+            add(pts, 0.0094, 0.0046, "braid", samples=4, tip_start=0.94, root_min=0.6, crescent=0.05)
 
-    # --- 3. fringe: ONE mass from high on the head, cut at the edge into narrow pointed locks -------------
-    # Tips: (x, dz above the eye line (x HS), tag). Tips over the eyes stop at the upper lash line; the
-    # long lock between the eyes reaches the nose bridge; the outer locks frame the eye corners.
-    tips = [(-0.068, -0.004, "bang_C"), (-0.05, 0.012, "bang_C"), (-0.032, 0.016, "bang_C"), (-0.015, 0.004, "bang_B"),
-            (0.0, -0.02, "bang_B"), (0.017, 0.008, "bang_B"), (0.036, 0.019, "bang_A"), (0.054, 0.014, "bang_A"),
-            (0.072, 0.002, "bang_A")]
+    # --- 3. fringe: ONE mass from high on the head, cut at the edge into pointed locks of varied length ---
+    # Tips: (x, dz above the eye line (x HS), sweep, tag). The part sits left of center (PART_X); locks
+    # right of it sweep toward her right, locks left of it toward her left, the long ones reach down over
+    # the upper lids and between the eyes, the outer ones frame the eye corners and lead into the side
+    # locks. Irregular spacing and lengths (never a comb), but every lock grows out of the same mass: no
+    # stray strand stands off the forehead.
+    PART_X = 0.022
+    tips = [(-0.074, -0.006, -0.008, "bang_C"), (-0.058, 0.012, -0.009, "bang_C"), (-0.041, 0.001, -0.011, "bang_C"),
+            (-0.024, 0.017, -0.008, "bang_B"), (-0.007, -0.002, -0.009, "bang_B"), (0.009, 0.019, -0.004, "bang_B"),
+            (0.027, 0.012, 0.003, "bang_A"), (0.045, 0.0, 0.007, "bang_A"), (0.061, 0.014, 0.007, "bang_A"),
+            (0.077, -0.003, 0.006, "bang_A")]
     cx = np.array([t[0] for t in tips])
     cz = np.array([EYE_Z + t[1] * HS for t in tips])
-    x_lo, x_hi = -0.08, 0.084
+    csw = np.array([t[2] for t in tips])
+    x_lo, x_hi = -0.084, 0.088
 
     def cap_z(x):
         alpha = math.degrees(math.asin(max(-0.95, min(0.95, x / 0.088))))
@@ -322,21 +320,22 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
         """1 inside the fringe, falling to 0 at its ends so the mass melts into the head at the temples."""
         return L._smooth(0.0, 0.016, x - x_lo) * L._smooth(0.0, 0.016, x_hi - x)
 
-    def column(x, tz, nv=30):
+    def column(x, tz, nv=30, lift=0.0, sw=None):
         alpha = math.degrees(math.asin(max(-0.95, min(0.95, x / 0.088))))
         ar = 12.0 + (alpha - 12.0) * 0.5              # roots gather toward the part, left of center
         k = 0.3 + 0.7 * side_k(x)
-        sw = -0.006 * (x / 0.07)                      # tips curve gently toward the face center
-        root = sc.surface(_dir(ar, 80), 0.004)
-        rise = sc.surface(_dir(0.8 * ar + 0.2 * alpha, 70), 0.0145 * k)
-        p1, _ = hairline_point(sc, alpha, 0.0155 * k)
+        if sw is None:                                # directional sweep away from the part
+            sw = float(np.interp(x, cx, csw))
+        root = sc.surface(_dir(ar, 80), 0.004 + 0.5 * lift)
+        rise = sc.surface(_dir(0.8 * ar + 0.2 * alpha, 70), 0.0145 * k + lift)
+        p1, _ = hairline_point(sc, alpha, 0.0155 * k + lift)
         z2 = max(hairline_z(alpha) - 0.012 * HS, tz + 0.012)
-        x2 = p1[0] + (x - p1[0]) * 0.35
-        p2 = _v(x2, front_y(x2, z2, 0.0125 * k), z2)
+        x2 = p1[0] + (x - p1[0]) * 0.35 + 0.1 * sw
+        p2 = _v(x2, front_y(x2, z2, 0.0125 * k + lift), z2)
         z3 = 0.5 * (z2 + tz)
-        x3 = p1[0] + (x - p1[0]) * 0.72 + 0.5 * sw
-        p3 = _v(x3, front_y(x3, z3, 0.009 * k), z3)
-        tip = _v(x + sw, front_y(x + sw, tz, 0.0052 * k), tz)
+        x3 = p1[0] + (x - p1[0]) * 0.72 + 0.35 * sw
+        p3 = _v(x3, front_y(x3, z3, 0.009 * k + lift), z3)
+        tip = _v(x + sw, front_y(x + sw, tz, 0.0052 * k + 0.7 * lift), tz)
         return _resample([root, rise, p1, p2, p3, tip], nv), [root, rise, p1, p2, p3, tip]
 
     xs = np.linspace(x_lo, x_hi, 150)
@@ -358,46 +357,41 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
         seg = cols[i0:i1 + 1]
         v, f, a = L.sheet(seg, lambda vv: thick(vv), ridge_fn=lambda i, vv, o=i0: ridge(i + o, vv), center=C,
                           col_scale=side_thin[i0:i1 + 1])
-        batch_hair.add(v, f, a, tips[k][2])
+        batch_hair.add(v, f, a, tips[k][3])
         free["hair"].append(_along_at(column(cx[k], cz[k])[1], 2))
+    # Layering: a few broad clumps lying ON the fringe (same flow, a little in front of it), ending at
+    # different lengths, so the fringe reads as overlapping hair with depth instead of one cut edge.
+    for x, dz, sw, w, tag in ((-0.047, 0.007, -0.013, 0.026, "bang_C"), (-0.016, 0.009, -0.011, 0.022, "bang_B"),
+                              (0.036, 0.006, 0.006, 0.024, "bang_A"), (0.068, 0.004, 0.008, 0.02, "bang_A")):
+        _, ctrl = column(x, EYE_Z + dz * HS, lift=0.0028, sw=sw)
+        add(ctrl[1:], w * HS, 0.0034, tag, free_at=1, tip_start=0.5, tip_power=0.8, root_min=0.35, crescent=0.25,
+            thickness_fn=lambda u: 0.3 + 0.7 * L._smooth(0.0, 0.2, u))
     for tag, x in (("bang_C", -0.032), ("bang_B", 0.0), ("bang_A", 0.036)):
         k = int(np.argmin(np.abs(cx - x)))
         paths[("hair_" + tag, None)] = (column(cx[k], cz[k])[1][2:], 3)
-    # A few separate locks lying on the fringe, slightly longer and crossing it, so it never reads as one
-    # cut sheet.
-    for x, dz, sw, tag in ((-0.041, 0.006, 0.007, "bang_C"), (0.008, -0.008, -0.006, "bang_B"),
-                           (0.046, 0.01, -0.008, "bang_A"), (-0.06, -0.012, 0.004, "bang_C")):
-        _, ctrl = column(x, EYE_Z + dz * HS)
-        pts = [ctrl[0], ctrl[1] + sc.outward(ctrl[1]) * 0.004, ctrl[2] + _v(0, -0.004, 0.0)]
-        pts += [ctrl[3] + _v(0.3 * sw, -0.0045, 0.0), ctrl[4] + _v(0.7 * sw, -0.004, 0.0), ctrl[5] + _v(sw, -0.003, 0.0)]
-        add(pts, 0.017 * HS, 0.0042, tag, free_at=2, tip_start=0.5, tip_power=0.6, root_min=0.4, crescent=0.2,
-            outward=_v(0.0, -1.0, 0.35), thickness_fn=lambda u: 0.3 + 0.7 * L._smooth(0.0, 0.3, u))
-    # Fine strands crossing the eyes (tertiary; LOD0 only).
-    for rx, tx, tdz in ((-0.004, -0.034, 0.002), (0.012, 0.042, 0.004), (-0.02, -0.052, 0.0)):
-        root = sc.surface(_dir(math.degrees(math.atan2(rx, 0.09)), 70), 0.019)
-        p1 = _v(rx, front_y(rx, hairline_z(0) - 0.004, 0.0225), hairline_z(0) - 0.004)
-        mz = EYE_Z + 0.04 * HS
-        mid = _v(0.5 * (rx + tx), front_y(0.5 * (rx + tx), mz, 0.013), mz)
-        tz = EYE_Z + tdz * HS
-        tip = _v(tx, front_y(tx, tz, 0.007), tz)
-        add([root, p1, mid, tip], 0.005, 0.0018, "bang_B", free_at=1, tip_start=0.25, root_min=0.8, crescent=0.05,
-            outward=_v(0.0, -1.0, 0.2))
 
     # --- 4. side framing --------------------------------------------------------------------------------
     def face_side(x, z, gap):
         """Point just outside the face/skull at (x, z), on the front-side surface."""
         return sc.keep_out(_v(x, front_y(x, z, gap) if abs(x) < 0.086 * HS else -0.02, z), gap)
 
+    K = HS / 1.12          # these locks were placed on the head at HS 1.12: keep them relative to the head
+
+    def hp(x, y, dz):
+        """Head-relative point: x, y (at HS 1.12) and height above the eye line, scaled with the head."""
+        return _v(x * K, headmod.AXIS_Y + (y - headmod.AXIS_Y) * K, EYE_Z + dz * K)
+
     # Hooked lock on her left side: hangs free in front of the ear, beside (not on) the cheek, and only
     # its tip curls forward and up toward the jaw.
     top, _ = hairline_point(sc, 76, 0.008)
+    # Wide, bowed outward off the cheek (face-framing width in the front silhouette), then curling in.
     hook = [top,
-            sc.keep_out(_v(0.093, -0.024, EYE_Z + 0.004), 0.012),
-            sc.keep_out(_v(0.097, -0.03, EYE_Z - 0.034), 0.014),
-            _v(0.091, -0.042, EYE_Z - 0.064),
-            _v(0.079, -0.058, EYE_Z - 0.076),
-            _v(0.07, -0.062, EYE_Z - 0.064)]
-    add(hook, 0.03 * HS, 0.0058, "side_L", free_at=1, tip_start=0.55, tip_power=0.7, root_min=0.85, crescent=0.22,
+            sc.keep_out(hp(0.097, -0.024, 0.004), 0.013),
+            sc.keep_out(hp(0.105, -0.032, -0.034), 0.016),
+            hp(0.1, -0.044, -0.066),
+            hp(0.086, -0.058, -0.082),
+            hp(0.072, -0.065, -0.07)]
+    add(hook, 0.038 * HS, 0.0062, "side_L", free_at=1, tip_start=0.55, tip_power=0.7, root_min=0.85, crescent=0.26,
         outward=_v(0.45, -1.0, 0.0))
     paths[("hair_side_A", "L")] = (hook[1:], 4)
     add([top + _v(0.0, 0.012, -0.004)] + [p + _v(0.004, 0.013, 0.004) for p in hook[1:-2]] + [hook[-2] + _v(0.006, 0.02, 0.012)],
@@ -405,7 +399,7 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
     # Long mass behind her left ear, falling in front of the shoulder to the chest.
     top, _ = hairline_point(sc, 106, 0.005)
     mass = [top,
-            sc.keep_out(_v(0.1, 0.036, EYE_Z - 0.03), 0.012),
+            sc.keep_out(hp(0.1, 0.036, -0.03), 0.012),
             _v(0.112, 0.004, 1.43),
             _v(0.124, -0.032, 1.36),
             _v(0.128, -0.058, 1.29),
@@ -418,13 +412,14 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
     # Her right side: two long locks hanging free in front of the ear (one to the collarbone, one to the
     # jaw) and a fine strand, so the side reads as separated hair, not a band.
     top, _ = hairline_point(sc, -78, 0.008)
+    # Longer and straighter than the hook (asymmetry), bowing out past the jaw and in toward the collarbone.
     right = [top,
-             sc.keep_out(_v(-0.092, -0.028, EYE_Z - 0.004), 0.012),
-             sc.keep_out(_v(-0.097, -0.032, EYE_Z - 0.052), 0.013),
-             _v(-0.093, -0.036, 1.43),
-             _v(-0.087, -0.046, 1.37),
-             _v(-0.08, -0.058, 1.325)]
-    add(right, 0.027 * HS, 0.0064, "side_R", free_at=1, tip_start=0.55, tip_power=0.7, root_min=0.85, crescent=0.22,
+             sc.keep_out(hp(-0.095, -0.028, -0.004), 0.013),
+             sc.keep_out(hp(-0.103, -0.033, -0.052), 0.015),
+             _v(-0.102, -0.036, 1.43),
+             _v(-0.094, -0.047, 1.37),
+             _v(-0.083, -0.06, 1.322)]
+    add(right, 0.034 * HS, 0.0066, "side_R", free_at=1, tip_start=0.55, tip_power=0.7, root_min=0.85, crescent=0.26,
         twist_deg=14, outward=_v(-0.45, -1.0, 0.0))
     paths[("hair_side_A", "R")] = (right[1:], 5)
     top2, _ = hairline_point(sc, -90, 0.008)
@@ -435,7 +430,7 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
 
     # --- 5. ponytail: locks bundled around the A/B/C sub-spines, fanning and drifting toward the tips ------
     rng = np.random.default_rng(7)
-    plan = [("A", 10, 0.064, 0.013, 1.0), ("B", 6, 0.056, 0.012, 0.8), ("C", 6, 0.052, 0.011, 0.76)]
+    plan = [("A", 7, 0.078, 0.013, 1.0), ("B", 4, 0.066, 0.012, 0.8), ("C", 4, 0.062, 0.011, 0.76)]   # few broad masses
     for key, count, w, th, rk in plan:
         spine = subs[key]
         Tn, S, U = _frames(spine)
@@ -455,15 +450,15 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
                 if i / (n - 1) > length:
                     break
                 r = float(np.interp(u, *_PONY_R)) * rk * rng.uniform(0.85, 1.0)
-                g = 0.75 * L._smooth(0.55, 1.0, u)            # tips gather into three clumps
+                g = 0.86 * L._smooth(0.5, 1.0, u)             # tips gather into three soft clumps
                 ph = phi + (clumps[int(np.argmin(np.abs(np.angle(np.exp(1j * (clumps - phi))))))] - phi) * g
                 ring = S[i] * math.cos(ph) + U[i] * math.sin(ph)
-                drift = (S[i] * 0.01 * u ** 1.5 * math.sin(3.1 * u + 1.3 * k) +
-                         U[i] * 0.007 * u ** 1.5 * math.cos(2.3 * u + 1.7 * k))
+                drift = (S[i] * 0.007 * u ** 1.5 * math.sin(3.1 * u + 1.3 * k) +
+                         U[i] * 0.005 * u ** 1.5 * math.cos(2.3 * u + 1.7 * k))
                 pts.append(spine[i] + ring * r + drift)
             pts[0] = T + (S[0] * math.cos(phi) + U[0] * math.sin(phi)) * 0.004
             if len(pts) >= 4:
-                add(pts, w * rng.uniform(0.85, 1.1), th, "ponytail_" + key, tip_start=0.42, tip_power=0.5, root_min=0.55,
+                add(pts, w * rng.uniform(0.9, 1.1), th, "ponytail_" + key, tip_start=0.5, tip_power=0.5, root_min=0.55,
                     crescent=0.2, twist_deg=rng.uniform(-35, 35), outward=_pony_out(spine))
         bones_n = {"A": 8, "B": 6, "C": 6}[key]
         paths[("hair_ponytail_" + key, None)] = (list(spine), bones_n)

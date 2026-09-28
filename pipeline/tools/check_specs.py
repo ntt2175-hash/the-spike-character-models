@@ -324,6 +324,14 @@ def check_character(char_id: str, specs: dict, ctx: dict, r: Report):
             r.err(where, f"body_shape.{k} is not a body master parameter")
         elif not shape_params[k]["range"][0] <= v <= shape_params[k]["range"][1]:
             r.err(where, f"body_shape.{k}={v} outside {shape_params[k]['range']}")
+    head_params = body_spec.get("head_shape_params", {})
+    for k, v in c.get("head_shape", {}).items():
+        if k == "note":
+            continue
+        if k not in head_params:
+            r.err(where, f"head_shape.{k} is not a head master parameter")
+        elif not head_params[k]["range"][0] <= v <= head_params[k]["range"][1]:
+            r.err(where, f"head_shape.{k}={v} outside {head_params[k]['range']}")
 
     # Face / expressions
     shape_set = ctx["shapes"]

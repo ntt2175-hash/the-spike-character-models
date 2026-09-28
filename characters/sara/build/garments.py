@@ -48,24 +48,44 @@ def jersey_cuts(bones):
 
 
 def jersey_field(bones, voxel=0.0022):
-    """Closed solid of the jersey's outer surface; openings are cut afterwards (jersey_keep)."""
+    """Closed solid of the jersey's outer surface; openings are cut afterwards (jersey_keep).
+
+    Built from Sara's own torso sections: close over the shoulders and upper chest, then the fabric
+    HANGS - the front falls from the chest (not following the waist back in), the back from the
+    shoulder blades, the sides from the rib cage with a slight flare at the hem. Never a rectangular block.
+    """
     m = bodymod.master(bones)
-    lm, p = m.lm, m.p
-    sc, kt = lm["s"], lm["kt"]
-    f = sdf.Field(_v(-0.2, -0.18, lm["hem_z"] - 0.09) * _v(1, 1, 1), _v(0.2, 0.16, lm["neck_z"] + 0.1), voxel)
+    lm = m.lm
+    sc = lm["s"]
+    rows = m.torso_rows()
+    z_apex, y_apex = m.bust_apex()
+    z_scap = m.tz(0.72)
+    hem = lm["hem_z"]
+    i_chest = int(np.argmin(np.abs(rows[:, 0] - m.tz(0.75))))
+    w_chest = rows[i_chest, 1]
+    drape = []
+    zs = np.linspace(hem - 0.03 * sc, m.tz(0.93), 22)
+    for z in zs:
+        w, yf, yb, nf, nb = [float(np.interp(z, rows[:, 0], rows[:, j])) for j in range(1, 6)]
+        below = max(0.0, z_apex - z)
+        hang_f = y_apex - 0.004 * sc + 0.07 * below                 # front falls from the chest, easing back a little
+        yf_j = min(yf - 0.007 * sc, hang_f) if z < z_apex else yf - 0.007 * sc
+        yb_j = max(yb + 0.007 * sc, float(np.interp(z_scap, rows[:, 0], rows[:, 3])) + 0.004 * sc - 0.06 * max(0.0, z_scap - z))
+        k_hem = 1.0 - min(1.0, (z - hem) / (0.12 * sc)) if z > hem else 1.0
+        w_j = max(w + 0.007 * sc, (w_chest - 0.006 * sc + 0.008 * sc * k_hem) if z < m.tz(0.75) else w + 0.007 * sc)
+        drape.append((z, w_j, yf_j, yb_j, 2.1, 2.2))
+    f = sdf.Field(_v(-0.2, -0.18, hem - 0.09), _v(0.2, 0.16, lm["neck_z"] + 0.1), voxel)
     for prim, k in bodymod.torso_parts(bones):
         f.union(prim, k)
-    f.offset(0.008)
-    # Drape: falls from the chest with light ease instead of hugging the waist, and stays outside the
-    # shorts; sized from the same torso/pelvis parameters as the body.
-    f.union(sdf.Ellipsoid(_v(0.0, -0.004, m.tz(0.364)), _v(0.126 * p["torso_width"], 0.095 * p["torso_depth"], 0.22 * kt) * sc), 0.05 * sc)
-    f.union(sdf.Ellipsoid(_v(0.0, -0.006, m.tz(0.161)), _v(0.132 * p["pelvis_width"], 0.104 * p["pelvis_depth"], 0.07 * kt) * sc), 0.05 * sc)
+    f.offset(0.007)
+    f.union(sdf.ZLoft(drape), 0.03 * sc)
     shorts_outer = f.copy()
     shorts_outer.d[:] = sdf.BIG
     shorts_outer.union(bodymod.torso_parts(bones)[0][0], 0.0)          # the torso loft, below the waistband
     shorts_outer.intersect(sdf.HalfSpace(_v(0.0, 0.0, lm["waistband_z"] + 0.02 * sc), _v(0.0, 0.0, 1.0)), 0.02 * sc)
     shorts_outer.offset(0.012)
     f.union_field(shorts_outer, 0.02 * sc)
+    f.drape(0.003 * sc, grow=0.0006 * sc)         # fabric bridges small creases (armpit, sternum, spine)
     return f
 
 
@@ -88,6 +108,7 @@ def shorts_field(bones, voxel=0.002):
         hip, knee = _bone(bones, f"{side}UpperLeg")
         f.union(sdf.RoundCone(hip + _v(0, 0, 0.01), hip + (knee - hip) * 0.4, 0.088 * tt * sc, 0.074 * tt * sc), 0.05 * sc)
     f.offset(0.004)
+    f.drape(0.004 * sc, grow=0.001 * sc)          # fabric spans the gluteal cleft and creases
     return f
 
 
@@ -149,110 +170,178 @@ def leg_band(bones, side, t0, t1, grow, voxel=0.0018, extra=()):
 
 
 def kneepad_field(bones, side):
-    """Sleeve pad with a controlled front pad close to the knee, so the lower leg never reads bulky."""
+    """Sara's knee protection (key art): a THIN sleeve that follows the knee, with a flat, low front plate
+    over the patella. Never a foam knee pad: the leg line stays readable through it."""
     m = bodymod.master(bones)
     kn = m.p["knee_size"] * m.s
     knee = _bone(bones, f"{side}LowerLeg")[0]
-    pad = [(sdf.Ellipsoid(knee + _v(0.0, -0.027, -0.004) * kn, _v(0.033, 0.021, 0.05) * kn), 0.014 * m.s)]
-    return leg_band(bones, side, -0.13, 0.16, 0.005, extra=pad)
+    plate = [(sdf.Ellipsoid(knee + _v(0.0, -0.03, -0.002) * kn, _v(0.03, 0.012, 0.044) * kn), 0.02 * m.s)]
+    return leg_band(bones, side, -0.15, 0.14, 0.003, extra=plate)
+
+
+def kneepad_plate(bones, side):
+    """The white front plate over the patella, a hair proud of the sleeve (the sleeve itself is pale blue)."""
+    m = bodymod.master(bones)
+    kn = m.p["knee_size"] * m.s
+    knee = _bone(bones, f"{side}LowerLeg")[0]
+    plate = [(sdf.Ellipsoid(knee + _v(0.0, -0.03, -0.002) * kn, _v(0.03, 0.012, 0.044) * kn), 0.02 * m.s)]
+    f, keeps = leg_band(bones, side, -0.12, 0.11, 0.0042, extra=plate)
+    f.intersect(sdf.HalfSpace(knee + _v(0.0, -0.014, 0.0), _v(0.0, 1.0, 0.0)), 0.004)       # front only
+    for sx in (1.0, -1.0):
+        f.intersect(sdf.HalfSpace(knee + _v(sx * 0.032 * kn / m.s, 0.0, 0.0), _v(sx, 0.0, 0.0)), 0.004)
+    return f, keeps
 
 
 def kneepad_bands(bones, side):
-    return [leg_band(bones, side, -0.13, -0.1, 0.0068), leg_band(bones, side, 0.13, 0.16, 0.0068)]
+    """Slim sky-blue elastic bands at the sleeve's top and bottom edges."""
+    return [leg_band(bones, side, -0.15, -0.125, 0.0042), leg_band(bones, side, 0.115, 0.14, 0.0042)]
 
 
 def sock_field(bones, side, high=True):
     if high:
-        return leg_band(bones, side, 0.12, 1.02, 0.0034, voxel=0.0018)
-    return leg_band(bones, side, 0.86, 1.02, 0.0034, voxel=0.0016)
+        return leg_band(bones, side, 0.12, 1.3, 0.0034, voxel=0.0018)      # continues down into the shoe
+    return leg_band(bones, side, 0.86, 1.3, 0.0034, voxel=0.0016)
 
 
 # ---------------------------------------------------------------------------
-# shoes
+# shoes: constructed footwear around the foot anatomy
 # ---------------------------------------------------------------------------
-def shoe_field(bones, side, voxel=0.0016):
-    """Low volleyball shoe sized from the foot bones and the body's foot/ankle parameters: slim last,
-    thin sole, trim toe box, so the shoe supports the leg line instead of dominating it."""
+class _Plane:
+    """Keep-side half space helper: solid where (p - point) . normal < 0."""
+
+    def __init__(self, point, normal):
+        self.h = sdf.HalfSpace(point, normal)
+
+    def bbox(self):
+        return None
+
+    def eval(self, P):
+        return self.h.eval(P)
+
+
+def _intersect_all(field, prims, k=0.0):
+    for pr in prims:
+        field.intersect(pr, k)
+    return field
+
+
+def shoe_frame(bones, side):
     m = bodymod.master(bones)
     sc = m.s
-    fw = m.p["foot_width"] * sc
-    ak = m.p["ankle"] * sc
-    ankle, toe_h = _bone(bones, f"{side}Foot")
-    _, toe_t = _bone(bones, f"{side}Toes")
-    heel = _v(ankle[0], ankle[1] + 0.048 * sc, 0.0)
-    tip = _v(toe_t[0], toe_t[1] - 0.01 * sc, 0.0)
-    fwd = tip - heel
-    L = np.linalg.norm(fwd)
-    fwd /= L
+    foot = m._foot(side)
+    ankle, _ = _bone(bones, f"{side}Foot")
+    heel, tip = foot.a.copy(), foot.b.copy()
+    fwd = _v(tip[0] - heel[0], tip[1] - heel[1], 0.0)
+    fwd /= np.linalg.norm(fwd)
+    back = heel - fwd * 0.026 * sc
+    front = tip + fwd * 0.002 * sc
+    L = float(np.linalg.norm((front - back)[:2]))
     lat = np.cross(fwd, _v(0, 0, 1))
-    mid = (heel + tip) * 0.5
+    return {"m": m, "s": sc, "foot": foot, "ankle": ankle, "back": _v(back[0], back[1], 0.0), "front": front,
+            "fwd": fwd, "lat": lat, "L": L, "fw": m.p["foot_width"] * sc, "ak": m.p["ankle"] * sc}
+
+
+def _at(fr, along, z=0.0, lateral=0.0):
+    return fr["back"] + fr["fwd"] * (along * fr["L"]) + fr["lat"] * lateral + _v(0, 0, z)
+
+
+def shoe_parts(bones, side, voxel=0.001):
+    """Sara's low volleyball shoe as separate constructed parts (key art): white upper with a rounded toe
+    box and a firm heel, black heel counter, black side stripe, black eyestay and laces, a light tongue,
+    a thin white midsole with toe spring and a dark outsole line. Returns [(name, field, color, remesh)]."""
+    fr = shoe_frame(bones, side)
+    sc, fw, fwd, lat, L = fr["s"], fr["fw"], fr["fwd"], fr["lat"], fr["L"]
     R = np.stack([lat, fwd, _v(0, 0, 1)], axis=1)
-    h = 0.88 * sc                                     # upper height scale
-    z_out, z_mid = 0.0062 * sc, 0.019 * sc            # outsole top, midsole top
-    f = sdf.Field(np.minimum(heel, tip) - 0.08, np.maximum(heel, tip) + _v(0.08, 0.08, 0.16), voxel)
-    # Sole slab (outsole + midsole), slight toe spring.
-    f.union(sdf.RoundBox(mid + _v(0, 0, 0.0115 * sc), _v(0.03 * fw, L * 0.5 - 0.008, 0.0062 * sc), 0.0075 * sc, R), 0.0)
-    # Upper: heel counter, midfoot, toe box, blended; opening at the collar.
-    f.union(sdf.Ellipsoid(heel + fwd * 0.046 * sc + _v(0, 0, 0.056 * h), _v(0.037 * fw, 0.048 * sc, 0.05 * h), R), 0.018 * sc)
-    f.union(sdf.Ellipsoid(mid + _v(0, 0, 0.049 * h), _v(0.04 * fw, 0.084 * sc, 0.043 * h), R), 0.022 * sc)
-    f.union(sdf.Ellipsoid(tip - fwd * 0.053 * sc + _v(0, 0, 0.031 * h), _v(0.038 * fw, 0.058 * sc, 0.028 * h), R), 0.022 * sc)
-    f.union(sdf.Ellipsoid(mid + fwd * 0.035 * sc + _v(0, 0, 0.078 * h), _v(0.025 * fw, 0.058 * sc, 0.019 * h), R), 0.014 * sc)  # tongue
-    f.subtract(sdf.Capsule(_v(ankle[0], ankle[1] + 0.008 * sc, 0.098 * h), _v(ankle[0], ankle[1] + 0.02 * sc, 0.24), 0.034 * ak), 0.006 * sc)
-    return f, {"heel": heel, "tip": tip, "fwd": fwd, "lat": lat, "L": L, "mid": mid, "h": h, "fw": fw,
-               "z_out": z_out, "z_mid": z_mid}
+    lo = np.minimum(fr["back"], fr["front"]) - _v(0.07, 0.07, 0.0)
+    hi = np.maximum(fr["back"], fr["front"]) + _v(0.07, 0.07, 0.13)
+    lo[2] = -0.003
+
+    def field():
+        return sdf.Field(lo, hi, voxel)
+
+    def last():
+        """The shoe last: foot + rounded toe box + firm heel."""
+        f = field()
+        f.union(fr["foot"], 0.0)
+        # Close to the foot: a low, rounded toe box, a vamp that follows the instep, a narrow firm heel.
+        f.union(sdf.Ellipsoid(_at(fr, 0.8, 0.021 * sc), _v(0.031 * fw / 0.9, 0.034 * sc, 0.015 * sc), R), 0.016 * sc)  # toe box
+        f.union(sdf.Ellipsoid(_at(fr, 0.47, 0.04 * sc), _v(0.027 * fw / 0.9, 0.056 * sc, 0.018 * sc), R), 0.02 * sc)   # vamp
+        f.union(sdf.Ellipsoid(_at(fr, 0.13, 0.033 * sc), _v(0.026 * fw / 0.9, 0.034 * sc, 0.031 * sc), R), 0.016 * sc)  # heel
+        return f
+
+    # Sole: thin, following the last's outline, thicker at the heel, toe spring at the front.
+    def sole_top(along):
+        return float(np.interp(along, [0.0, 0.5, 0.75, 1.0], [0.0135, 0.0105, 0.0088, 0.01])) * sc
+
+    sole = last()
+    sole.offset(0.0032 * sc)
+    top_heel, top_toe = sole_top(0.0), sole_top(0.75)
+    slope = (top_heel - top_toe) / (0.75 * L)
+    sole.intersect(sdf.HalfSpace(_at(fr, 0.0, top_heel), _v(fwd[0] * slope, fwd[1] * slope, 1.0)), 0.003 * sc)
+    sole.intersect(sdf.HalfSpace(_v(0, 0, 0.0), _v(0, 0, -1.0)), 0.0)
+    spring = 0.1                                               # toe spring: the sole lifts ahead of the ball
+    sole.intersect(sdf.HalfSpace(_at(fr, 0.8, 0.0), _v(fwd[0] * spring, fwd[1] * spring, -1.0)), 0.004 * sc)
+    outsole = sole.copy()
+    outsole.offset(0.0005 * sc)
+    outsole.intersect(sdf.HalfSpace(_v(0, 0, 0.003 * sc), _v(0, 0, 1.0)), 0.0)
+    # Upper: close over the last (thin leather, not a padded block); clean collar below the ankle bones.
+    upper = last()
+    upper.offset(0.0028 * sc)
+    upper.intersect(sdf.HalfSpace(_at(fr, 0.0, top_heel - 0.004 * sc), _v(0, 0, -1.0)), 0.0)
+    collar_n = _v(-fwd[0] * 0.14, -fwd[1] * 0.14, 1.0)
+    collar_p = _v(*fr["ankle"][:2], 0.063 * sc)
+    upper.intersect(sdf.HalfSpace(collar_p, collar_n), 0.004 * sc)
+    upper.subtract(sdf.Capsule(_v(fr["ankle"][0], fr["ankle"][1] + 0.006 * sc, 0.048 * sc),
+                               _v(fr["ankle"][0], fr["ankle"][1] + 0.012 * sc, 0.3), 0.028 * fr["ak"] / sc * sc), 0.005 * sc)
+
+    def overlay(regions, grow=0.0022):
+        f = upper.copy()
+        f.offset(grow * sc)
+        return _intersect_all(f, regions, 0.0015 * sc)
+
+    # Heel counter: a curved panel whose front edge sweeps from the collar down and forward to the sole.
+    c0, c1 = _at(fr, 0.13, 0.066 * sc), _at(fr, 0.3, 0.012 * sc)
+    dc = (c1 - c0) / np.linalg.norm(c1 - c0)
+    nc = np.cross(lat, dc)
+    nc = nc if nc @ fwd > 0 else -nc
+    heel_counter = overlay([sdf.HalfSpace(c0, nc / np.linalg.norm(nc)), sdf.HalfSpace(_v(0, 0, 0.05 * sc), _v(0, 0, 1.0))])
+    # Side stripe: a swept band from the heel counter forward and down toward the midsole.
+    p0, p1 = _at(fr, 0.2, 0.05 * sc), _at(fr, 0.66, 0.021 * sc)
+    d = (p1 - p0) / np.linalg.norm(p1 - p0)
+    n = np.cross(d, lat)
+    n /= np.linalg.norm(n)
+    hw = 0.0058 * sc
+    stripe = overlay([sdf.HalfSpace(p0 + n * hw, n), sdf.HalfSpace(p0 - n * hw, -n),
+                      sdf.HalfSpace(_at(fr, 0.68), fwd), sdf.HalfSpace(_at(fr, 0.18), -fwd)], grow=0.0024)
+    # Lace area: a light tongue down the instep between two black eyestay strips.
+    ew = 0.0165 * fw / 0.9
+    lace_box = [sdf.HalfSpace(_at(fr, 0.71), fwd), sdf.HalfSpace(_at(fr, 0.34), -fwd), sdf.HalfSpace(_v(0, 0, 0.03 * sc), _v(0, 0, -1.0))]
+    eyestay = field()
+    for sgn in (1.0, -1.0):
+        e = overlay([sdf.HalfSpace(_at(fr, 0.0, 0.0, sgn * ew), sgn * lat),
+                     sdf.HalfSpace(_at(fr, 0.0, 0.0, sgn * (ew - 0.0052 * sc)), -sgn * lat)] + lace_box)
+        eyestay.union_field(e, 0.0)
+    tongue = overlay([sdf.HalfSpace(_at(fr, 0.0, 0.0, ew - 0.0052 * sc), lat),
+                      sdf.HalfSpace(_at(fr, 0.0, 0.0, -(ew - 0.0052 * sc)), -lat)] + lace_box, grow=0.0016)
+    # Laces seated on the eyestay surface (sampled from the upper).
+    laces = field()
+    for i in range(4):
+        a_ = 0.41 + i * 0.075
+        pts = []
+        for lt in (-ew * 0.85, ew * 0.85):
+            q = _at(fr, a_, 0.0, lt)
+            zs = np.linspace(0.11 * sc, 0.0, 220)
+            dd = upper.sample_at(np.stack([np.full_like(zs, q[0]), np.full_like(zs, q[1]), zs], axis=1))
+            iz = int(np.argmax(dd < 0))
+            pts.append(_v(q[0], q[1], zs[iz] + 0.0036 * sc))
+        a, b = pts
+        laces.union(sdf.Capsule(a - fwd * 0.005 * sc, b + fwd * 0.005 * sc, 0.0023 * sc), 0.0)
+        laces.union(sdf.Capsule(b - fwd * 0.005 * sc, a + fwd * 0.005 * sc, 0.0023 * sc), 0.0)
+    return [("upper", upper, "@shoe_upper", 9000), ("midsole", sole, "@shoe_sole", 5000),
+            ("outsole", outsole, "@shoe_outsole", None), ("heel", heel_counter, "@shoe_accent", None),
+            ("stripe", stripe, "@shoe_accent", None), ("eyestay", eyestay, "@shoe_accent", None),
+            ("tongue", tongue, "@shoe_tongue", None), ("laces", laces, "@shoe_lace", None)]
 
 
-def shoe_zone(p, info, side_sign):
-    """Material zone for a shoe vertex: outsole / midsole / heel / stripe / upper."""
-    rel = p - info["heel"]
-    along = float(rel @ info["fwd"]) / info["L"]      # 0 heel .. 1 toe
-    lateral = float(rel @ info["lat"])
-    z, h = p[2], info["h"]
-    if z < info["z_out"]:
-        return "outsole"
-    if z < info["z_mid"]:
-        return "midsole"
-    if along < 0.2 and z < 0.1 * h:
-        return "heel"
-    band_z = (0.072 - 0.054 * (along - 0.15) / 0.55) * h
-    if abs(lateral) > 0.026 * info["fw"] and 0.15 < along < 0.7 and abs(z - band_z) < 0.008 * h:
-        return "stripe"
-    return "upper"
-
-
-def laces(info, pairs=5):
-    """Criss-cross lace capsules across the top of the vamp."""
-    out = []
-    mid, fwd, lat, h, fw = info["mid"], info["fwd"], info["lat"], info["h"], info["fw"]
-    for i in range(pairs):
-        a = 0.03 + i * 0.021
-        z = (0.094 - i * 0.0068) * h
-        c0 = mid + fwd * (a - 0.06) + _v(0, 0, z)
-        w = 0.0145 * fw / 0.85
-        out.append(sdf.Capsule(c0 - lat * w - fwd * 0.004, c0 + lat * w + fwd * 0.004, 0.0021))
-        out.append(sdf.Capsule(c0 + lat * w - fwd * 0.004, c0 - lat * w + fwd * 0.004, 0.0021))
-    return out
-
-
-def _ss(e0, e1, x):
-    t = np.clip((x - e0) / (e1 - e0), 0.0, 1.0)
-    return t * t * (3 - 2 * t)
-
-
-def shoe_masks(P, info):
-    """Smooth zone masks per vertex: white (midsole) and black (outsole, heel counter, side stripe, laces)."""
-    rel = P - info["heel"]
-    along = (rel @ info["fwd"]) / info["L"]
-    lateral = rel @ info["lat"]
-    z, h, zo, zm, fw = P[:, 2], info["h"], info["z_out"], info["z_mid"], info["fw"] / 0.85
-    outsole = _ss(zo + 0.001, zo - 0.001, z)
-    midsole = _ss(zo - 0.001, zo + 0.001, z) * _ss(zm + 0.001, zm - 0.001, z)
-    upper = _ss(zm - 0.001, zm + 0.001, z)
-    heel = _ss(0.215, 0.185, along) * _ss(0.103 * h, 0.097 * h, z) * upper
-    band_z = (0.072 - 0.054 * (along - 0.15) / 0.55) * h
-    stripe = _ss(0.0095 * h, 0.0077 * h, np.abs(z - band_z)) * _ss(0.022 * fw, 0.027 * fw, np.abs(lateral)) * \
-        _ss(0.12, 0.17, along) * _ss(0.72, 0.66, along) * upper
-    laces = _ss(0.068 * h, 0.072 * h, z) * _ss(0.019 * fw, 0.015 * fw, np.abs(lateral)) * _ss(0.3, 0.36, along) * \
-        _ss(0.78, 0.72, along)
-    black = np.clip(np.maximum.reduce([outsole, heel, stripe, laces]), 0, 1)
-    return midsole, black
+def _n(v):
+    return v / np.linalg.norm(v)

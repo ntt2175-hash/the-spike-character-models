@@ -16,82 +16,65 @@ import bmesh
 import bpy
 import numpy as np
 
-from spike_pipeline.modeling import head as headlib
+from spike_pipeline.modeling import head_master
 from spike_pipeline.modeling import paint
 
 from common import CHAR, log
 
-HS = 1.07                               # head scale: proportion pass (balanced against the slimmer, longer body)
-EYE_X, EYE_Z = 0.039, 1.5461            # painted eye centers (eye spacing 78 mm); LeftEye bone height
-CHIN_Z = EYE_Z - 0.078 * HS             # acorn face: eye line to chin ~1.1x the eye spacing
-CROWN_Z = EYE_Z + 0.089 * HS            # top of the skull (hair adds ~2 cm)
-NOSE_T, MOUTH_T = 0.299, 0.168          # nose tip and lip line, fraction of skull height from the chin
+def _character_head():
+    """Head size and eye line come from the character data (proportion master): head_scale is the modeled
+    head size, the eye line is the rig's LeftEye bone, so head, neck and torso change as one system."""
+    import spike_specs as ss
+    c = ss.load_character("sara")
+    bones = {b["name"]: b for b in ss.build_character_skeleton(ss.load_spec("skeleton"), c)}
+    return (float(c["proportions"].get("head_scale", 1.12)), float(bones["LeftEye"]["head"][2]),
+            dict(c.get("head_shape", {})))
+
+
+HS, _EYE_BONE_Z, _HEAD_SHAPE = _character_head()   # head scale (1.0 = reference anime head, ~0.167 m chin to crown)
+EYE_X, EYE_Z = 0.0415 * HS / 1.12, _EYE_BONE_Z     # painted eye centers (Sara's spacing, scales with the head)
 AXIS_Y = 0.012
+# The head is sculpted from primary forms by the shared head master (cranium -> face -> cheeks -> jaw ->
+# chin -> sockets -> nose -> lips -> ears); Sara's design lives in character.json head_shape.
+HEAD = head_master.Head((0.0, AXIS_Y, EYE_Z), EYE_X, HS, _HEAD_SHAPE)
+CHIN_Z = HEAD.chin_z
+CROWN_Z = HEAD.crown_z
+LANDMARKS = HEAD.landmarks()             # nose tip / mouth heights from the sculpt: paint follows the form
 EYE_SCALE = 1.30 * HS                   # painted eye design mm -> face mm
 EYE_UV_SIZE = 0.05 * EYE_SCALE          # the eye decal texture covers the 50 x 50 design-mm canvas
-FACE_TEX_ORIGIN = (-0.11, CHIN_Z - 0.01)  # face projection: x -0.11..0.11, z chin-1cm .. +27cm
-FACE_TEX_SIZE = (0.22, 0.27)
+FACE_TEX_ORIGIN = (-0.13, CHIN_Z - 0.01)  # face projection: x -0.13..0.13, z chin-1cm .. +30cm
+FACE_TEX_SIZE = (0.26, 0.30)
 
 
-def profile():
-    """Acorn-shaped head: round, wide skull and cheeks, quick taper to a small pointed chin."""
-    t = [0.00, 0.05, 0.10, 0.16, 0.22, 0.28, 0.34, 0.42, 0.50, 0.60, 0.70, 0.80, 0.88, 0.94, 1.00]
-    Y = lambda vals: [AXIS_Y + (v - AXIS_Y) * HS for v in vals]
-    W = lambda vals: [v * HS for v in vals]
-    return headlib.HeadProfile(
-        CHIN_Z, CROWN_Z, t,
-        y_front=Y([-0.064, -0.071, -0.077, -0.080, -0.082, -0.0835, -0.0845, -0.085, -0.085, -0.084, -0.080, -0.072, -0.060, -0.043, -0.010]),
-        y_back=Y([-0.046, -0.032, -0.014, 0.006, 0.028, 0.052, 0.075, 0.093, 0.103, 0.108, 0.107, 0.100, 0.089, 0.070, 0.027]),
-        half_width=W([0.011, 0.027, 0.041, 0.053, 0.062, 0.069, 0.0745, 0.0785, 0.0805, 0.0815, 0.0815, 0.079, 0.072, 0.058, 0.022]),
-        y_wide=Y([-0.054, -0.050, -0.043, -0.033, -0.021, -0.009, 0.0, 0.006, 0.009, 0.011, 0.012, 0.012, 0.012, 0.012, 0.010]),
-        n_front=[2.0, 2.1, 2.3, 2.5, 2.7, 2.85, 2.9, 2.9, 2.85, 2.65, 2.45, 2.25, 2.1, 2.0, 2.0],
-        n_back=[2.0] * 15,
-    )
-
-
-def features(p):
-    te = p.t_of(EYE_Z)
-    k = HS
-    return [
-        headlib.Feature(0.0, NOSE_T, 0.0046 * k, 0.0042 * k, 0.034),       # nose tip (tiny)
-        headlib.Feature(0.0, NOSE_T + 0.07, 0.0016 * k, 0.0035 * k, 0.07),  # nose bridge
-        headlib.Feature(0.0, NOSE_T - 0.035, -0.0011 * k, 0.006 * k, 0.013),  # under-nose recess
-        headlib.Feature(0.0, MOUTH_T + 0.022, 0.001 * k, 0.011 * k, 0.013),  # upper lip
-        headlib.Feature(0.0, MOUTH_T, -0.0008 * k, 0.008 * k, 0.009),       # lip line
-        headlib.Feature(0.0, MOUTH_T - 0.025, 0.0007 * k, 0.009 * k, 0.013),  # lower lip
-        headlib.Feature(0.0, 0.06, 0.0012 * k, 0.01 * k, 0.035),            # chin point
-        headlib.Feature(EYE_X, te, -0.0014 * k, 0.014 * k, 0.055, mirror=True),     # soft socket
-        headlib.Feature(0.054, 0.33, 0.0018 * k, 0.018 * k, 0.08, mirror=True),     # cheek fullness
-        headlib.Feature(0.03, te + 0.09, 0.0008 * k, 0.02 * k, 0.035, mirror=True),  # brow plane
-    ]
+def front_y(x, z):
+    """Y of the face / skull front surface at (x, z) (for hair placement); None if the ray misses."""
+    return HEAD.front_y(x, z)
 
 
 def build_head_mesh(coll_name="sara_GAME_LOD0"):
-    p = profile()
-    verts, quads, tris, grid, front = headlib.loft(p, features(p), rings=96, segments=128)
+    import common
+    f = HEAD.field(voxel=0.0011)
+    obj = common.sdf_to_object("sara_face_LOD0", f, coll_name)
+    common.decimate(obj, 0.35)
+    common.smooth(obj, 0.35, 2)
+    common.quadriflow(obj, 16000)
+    common.shade_smooth(obj)
+    me = obj.data
     bm = bmesh.new()
-    bv = [bm.verts.new(v) for v in verts]
-    for q in quads:
-        bm.faces.new([bv[i] for i in q])
-    for t in tris:
-        bm.faces.new([bv[i] for i in t])
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.from_mesh(me)
     uv = bm.loops.layers.uv.new("UVMap")
-    for f in bm.faces:
-        for loop in f.loops:
+    for fc in bm.faces:
+        for loop in fc.loops:
             co = loop.vert.co
             loop[uv].uv = ((co.x - FACE_TEX_ORIGIN[0]) / FACE_TEX_SIZE[0], (co.z - FACE_TEX_ORIGIN[1]) / FACE_TEX_SIZE[1])
-    me = bpy.data.meshes.new("sara_face_LOD0")
     bm.to_mesh(me)
     bm.free()
-    for poly in me.polygons:
-        poly.use_smooth = True
-    obj = bpy.data.objects.new("sara_face_LOD0", me)
-    _link(obj, coll_name)
-    # Back of the head must never show face features: store a front mask attribute for the shader.
+    # Back of the head must never show face features: a front mask attribute for the shader.
+    P = np.array([v.co for v in me.vertices])
+    front = np.clip((AXIS_Y - 0.035 * HS - P[:, 1]) / (0.03 * HS), 0.0, 1.0)
     attr = me.attributes.new("front", "FLOAT", "POINT")
-    attr.data.foreach_set("value", np.asarray(front, dtype=np.float32))
-    return obj, p, grid
+    attr.data.foreach_set("value", front.astype(np.float32))
+    return obj, None, None
 
 
 def build_eye_decals(face_obj, p, coll_name="sara_GAME_LOD0"):
@@ -104,7 +87,8 @@ def build_eye_decals(face_obj, p, coll_name="sara_GAME_LOD0"):
             keep = []
             for f in bm.faces:
                 c = f.calc_center_median()
-                if (sx * c.x > 0.004 and abs(c.x - sx * EYE_X) < 0.036 and abs(c.z - EYE_Z) < 0.03 and c.y < -0.045):
+                if (sx * c.x > 0.004 and abs(c.x - sx * EYE_X) < 0.036 * HS / 1.12 and abs(c.z - EYE_Z) < 0.03 * HS / 1.12
+                        and c.y < -0.045 * HS / 1.12):
                     keep.append(f)
             kill = [f for f in bm.faces if f not in set(keep)]
             bmesh.ops.delete(bm, geom=kill, context="FACES")
@@ -131,20 +115,9 @@ def build_eye_decals(face_obj, p, coll_name="sara_GAME_LOD0"):
 
 
 def build_ears(coll_name="sara_GAME_LOD0"):
-    objs = []
-    for sx in (1, -1):
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, radius=1.0)
-        o = bpy.context.active_object
-        o.name = f"sara_ear_{'L' if sx > 0 else 'R'}_LOD0"
-        o.scale = (0.0055 * HS, 0.012 * HS, 0.019 * HS)
-        o.location = (sx * 0.0755 * HS, 0.012 + 0.005 * HS, EYE_Z - 0.019)
-        o.rotation_euler = (math.radians(-12), math.radians(sx * -8), math.radians(sx * 10))
-        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-        for poly in o.data.polygons:
-            poly.use_smooth = True
-        _link(o, coll_name)
-        objs.append(o)
-    return objs
+    """The ears are part of the head sculpt (head master): helix, concha and lobe integrated into the
+    skull between the eye line and the jaw. Kept for API compatibility."""
+    return []
 
 
 def _link(obj, coll_name):
@@ -183,16 +156,16 @@ def paint_face(path, px=2048):
         c.paint(c.mask_gauss(ex + sx * 15.0 * k, ez + 1.0 * k, 3.5 * k, 4.0 * k), "#f0a9ba", 0.35)
         c.paint(c.mask_gauss(ex + sx * 1.0, ez + 11.5 * k, 11.0 * k, 2.2 * k), "#f5c6cf", 0.35)   # upper lid tint
         # Brows: thin, dark, straight, inner end lower (focus).
-        brow = [(ex - sx * 13.0 * k, ez + 14.6 * k), (ex - sx * 2.5 * k, ez + 16.8 * k), (ex + sx * 8.5 * k, ez + 17.4 * k),
-                (ex + sx * 15.5 * k, ez + 15.4 * k)]
+        brow = [(ex - sx * 13.0 * k, ez + 13.4 * k), (ex - sx * 2.5 * k, ez + 15.6 * k), (ex + sx * 8.5 * k, ez + 16.4 * k),
+                (ex + sx * 15.5 * k, ez + 14.8 * k)]
         c.paint(c.mask_stroke(brow, [1.3, 1.75, 1.35, 0.3], blur_mm=0.06), "#2a1d24", 0.97)
     # Nose: tiny shadow tick + a soft pink bridge flush (the reference's nose is almost only shadow).
-    nz = (CHIN_Z + NOSE_T * (CROWN_Z - CHIN_Z)) * 1000
+    nz = LANDMARKS["nose_tip_z"] * 1000
     c.paint(c.mask_gauss(0.0, nz + 9.0, 3.0, 9.0), "#f4bcc7", 0.35)
     c.paint(c.mask_gauss(0.3, nz + 0.4, 1.8, 1.2), "#eea3b1", 0.55)
     c.paint(c.mask_stroke([(-1.9, nz + 1.4), (-1.2, nz - 0.2), (0.4, nz - 0.6)], [0.2, 0.5, 0.15], blur_mm=0.08), "#b87a88", 0.7)
     # Mouth: small, parted exhale with a hint of upper teeth.
-    mz = (CHIN_Z + MOUTH_T * (CROWN_Z - CHIN_Z)) * 1000
+    mz = LANDMARKS["mouth_z"] * 1000
     mouth = [(x * 0.95 * HS, mz + dy * HS) for x, dy in ((-4.4, 0.4), (-2.2, 1.5), (0.0, 1.7), (2.3, 1.45), (4.3, 0.3),
                                                      (2.3, -1.9), (0.0, -2.4), (-2.3, -1.85))]
     mouth_poly = paint.catmull(mouth, 12, closed=True)
@@ -212,13 +185,15 @@ def paint_face(path, px=2048):
 
 # Eye-local design coordinates: origin at the eye center, +x toward the OUTER corner, +y up (design mm,
 # scaled by EYE_SCALE on the face).
-INNER = (-15.2, 0.4)
-OUTER = (16.6, 2.2)
-UPPER_LID = [INNER, (-12.0, 6.4), (-5.0, 10.2), (2.5, 10.8), (10.0, 9.1), (15.0, 5.8), OUTER]
-LOWER_LID = [INNER, (-11.5, -4.6), (-4.0, -8.7), (3.5, -9.2), (10.5, -6.8), OUTER]
+# Sara's eye: a large but horizontal almond opening (aspect ~2:1), the outer corner lifted, a strong
+# upper lid; the iris is sized INSIDE the opening (its top tucks under the lid), never a round button.
+INNER = (-15.6, 0.2)
+OUTER = (17.0, 3.0)
+UPPER_LID = [INNER, (-12.5, 5.2), (-5.5, 8.6), (2.0, 9.4), (9.5, 8.3), (14.5, 5.8), OUTER]
+LOWER_LID = [INNER, (-11.5, -3.8), (-4.0, -6.6), (3.5, -7.0), (10.5, -5.2), OUTER]
 CORNER_Y = 1.3
-IRIS_C = (0.6, -0.4)
-IRIS_R = (8.9, 10.0)
+IRIS_C = (0.8, -0.5)
+IRIS_R = (7.9, 8.8)
 
 
 def _opening_polygon():
@@ -309,7 +284,7 @@ def paint_lash(path, px=2048):
     upper = paint.catmull(UPPER_LID, 20)
     n = len(upper)
     # Main line: fine at the inner corner, heavy and sharp over the outer third, outward wing.
-    line_pts = [(INNER[0] + 0.3, INNER[1] + 0.5)] + UPPER_LID[1:-1] + [(OUTER[0] + 0.3, OUTER[1] + 0.5), (20.8, 2.9)]
+    line_pts = [(INNER[0] + 0.3, INNER[1] + 0.5)] + UPPER_LID[1:-1] + [(OUTER[0] + 0.3, OUTER[1] + 0.5), (21.6, 4.2)]
     polys = [c.stroke_polygon(line_pts, [0.45, 1.0, 1.45, 1.85, 2.5, 2.9, 2.3, 0.25])]
     # Upper lashes: clumped, long toward the outer corner, sweeping outward.
     rng = np.random.default_rng(5)

@@ -44,6 +44,18 @@ elif tiles_kind == "silhouette":
     poses.keyart(rig)
     tiles = [("keyart_match", "lookdev_neutral", (594, 1346), "key-art match")]
     out = out / "keyart"
+elif tiles_kind in ("face", "headclay"):
+    # Face identity tests: close-ups front, 3/4 and a slight low angle under simple studio light;
+    # "headclay" hides hair / ornaments and paints everything gray (the head must read without them).
+    cu = dict(face, frame_height_m=0.3, focal_length_mm=85, anchor_offset=[0.0, 0.0, -0.012])
+    tiles = [(dict(cu, pitch_deg=0), "lookdev_neutral", (800, 800), "face front"),
+             (dict(cu, yaw_deg=35, pitch_deg=2), "lookdev_neutral", (800, 800), "face 3/4"),
+             (dict(cu, yaw_deg=28, pitch_deg=-14), "lookdev_neutral", (800, 800), "face slight low angle"),
+             (dict(cu, yaw_deg=90, pitch_deg=0), "lookdev_neutral", (800, 800), "face side")]
+    if tiles_kind == "headclay":
+        dev_render.clay(hide=("hair", "ribbon", "tie", "clip"))
+    else:
+        tiles.append((dict(cu, yaw_deg=-35, pitch_deg=2), "cinematic_soft", (800, 800), "face 3/4 (her left)"))
 elif tiles_kind == "keyart":
     tiles = [("keyart_match", "lookdev_neutral", (594, 1346), "key-art match"),
              ("keyart_match", "sp_hero", (594, 1346), "key-art match (S+ light)"),

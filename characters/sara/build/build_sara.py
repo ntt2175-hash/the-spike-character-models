@@ -291,23 +291,26 @@ def main(out_dir: Path, tex_cache: Path | None):
     shorts_keeps, _ = G.shorts_keep(bones)
     shorts = garment("sara_shorts_LOD0", shorts_solid, shorts_keeps, 5000, 0.002)
     cull_covered_skin(body_obj, jersey_solid, shorts_solid, bones)
-    pads, bands, socks = {}, [], {}
+    pads, bands, socks, plates = {}, [], {}, {}
     for side in ("Left", "Right"):
         f, keeps = G.kneepad_field(bones, side)
-        pads[side] = garment(f"sara_kneepad_{side[0]}_LOD0", f, keeps, 1600, 0.006, pre_decimate=None)
+        pads[side] = garment(f"sara_kneepad_{side[0]}_LOD0", f, keeps, 1800, 0.0024, pre_decimate=None)
+        f, keeps = G.kneepad_plate(bones, side)
+        plates[side] = garment(f"sara_kneeplate_{side[0]}_LOD0", f, keeps, 900, 0.0015, pre_decimate=None)
         for i, (bf, bkeeps) in enumerate(G.kneepad_bands(bones, side)):
-            bands.append((side, garment(f"sara_kneeband_{side[0]}{i}_LOD0", bf, bkeeps, 900, 0.003, pre_decimate=None)))
+            bands.append((side, garment(f"sara_kneeband_{side[0]}{i}_LOD0", bf, bkeeps, 900, 0.0018, pre_decimate=None)))
     f, keeps = G.sock_field(bones, "Left", high=True)
     socks["Left"] = garment("sara_sock_L_LOD0", f, keeps, 2600, 0.002, pre_decimate=None)
     f, keeps = G.sock_field(bones, "Right", high=False)
     socks["Right"] = garment("sara_sock_R_LOD0", f, keeps, 900, 0.002, pre_decimate=None)
     shoes = {}
     for side in ("Left", "Right"):
-        f, sinfo = G.shoe_field(bones, side)
-        for lace in G.laces(sinfo):
-            f.union(lace, 0.0)
-        shoe = field_object(f"sara_shoe_{side[0]}_LOD0", f, decimate=0.3, smooth=(0.3, 2), qf=9000)
-        shoes[side] = (shoe, sinfo)
+        parts = []
+        for pname, f, color, qf in G.shoe_parts(bones, side):
+            o = field_object(f"sara_shoe_{side[0]}_{pname}_LOD0", f, decimate=0.3 if qf else 0.5, smooth=(0.3, 2), qf=qf)
+            o["shoe_color"] = color
+            parts.append(o)
+        shoes[side] = parts
     log(f"geometry built in {time.time() - t0:.0f}s")
 
     # --- textures -----------------------------------------------------------------------------
@@ -352,8 +355,9 @@ def main(out_dir: Path, tex_cache: Path | None):
                                      softness=0.04, overlay_attribute="trim", overlay_color="#22325a"),
         "shorts": toon.toon_textured("M_sara_shorts", tex / names["shorts"], shade_mul=(0.62, 0.66, 0.84), threshold=0.3,
                                      softness=0.04),
-        "pad": M("M_sara_kneepad", "@kneepad_pad", "#aab3c4", threshold=0.28, softness=0.05),
-        "band": M("M_sara_kneeband", "@kneepad_band", "#5b82a0"),
+        "pad": M("M_sara_kneepad", "@kneepad_sleeve", "#8ea6c4", threshold=0.28, softness=0.06),
+        "plate": M("M_sara_kneeplate", "@kneepad_pad", "#b7c3d6", threshold=0.28, softness=0.06),
+        "band": M("M_sara_kneeband", "@kneepad_band", "#4f86b8"),
         "sock": M("M_sara_sock", "@sock_black", "#0b0b10", rim_mask=1.5),
         "ankle": M("M_sara_anklesock", "@ankle_sock", "#a4aabb"),
         "upper": M("M_sara_shoe_upper", "@shoe_upper", "#868c9f", threshold=0.3),
@@ -390,18 +394,20 @@ def main(out_dir: Path, tex_cache: Path | None):
     dress(jersey, mats["jersey"], cloth_outline, 0.0018)
     dress(shorts, mats["shorts"], cloth_outline, 0.0016)
     for side in pads:
-        dress(pads[side], mats["pad"], cloth_outline, 0.0016)
+        dress(pads[side], mats["pad"], cloth_outline, 0.0012)
+        dress(plates[side], mats["plate"], cloth_outline, 0.0006)
     for side, b in bands:
         dress(b, mats["band"], cloth_outline, 0.001)
     dress(socks["Left"], mats["sock"], cloth_outline, 0.0014)
     dress(socks["Right"], mats["ankle"], cloth_outline, 0.001)
-    shoe_mat = materials_sara.shoe_material(pal)
-    for side, (shoe, sinfo) in shoes.items():
-        white, black = G.shoe_masks(verts_of(shoe), sinfo)
-        for key, vals in (("shoe_white", white), ("shoe_black", black)):
-            a = shoe.data.attributes.new(key, "FLOAT", "POINT")
-            a.data.foreach_set("value", vals.astype(np.float32))
-        dress(shoe, shoe_mat, cloth_outline, 0.0014)
+    shoe_shade = {"@shoe_upper": "#a9aebd", "@shoe_sole": "#c3c6d0", "@shoe_outsole": "#101014", "@shoe_accent": "#050507",
+                  "@shoe_tongue": "#9ea3b3", "@shoe_lace": "#0b0b0e"}
+    for side, parts in shoes.items():
+        for o in parts:
+            key = o["shoe_color"]
+            mat = bpy.data.materials.get(f"M_sara_{key[1:]}") or M(f"M_sara_{key[1:]}", key, shoe_shade[key], threshold=0.3,
+                                                                    softness=0.04, rim_mask=0.8)
+            dress(o, mat, cloth_outline, 0.0009 if key in ("@shoe_upper", "@shoe_sole") else 0.0005)
 
     # --- weights + binding ----------------------------------------------------------------------
     t1 = time.time()
@@ -429,11 +435,13 @@ def main(out_dir: Path, tex_cache: Path | None):
     skin(shorts, bones, ["Hips", "Spine", "LeftUpperLeg", "RightUpperLeg", "LeftUpperLegTwist", "RightUpperLegTwist"])
     for side in ("Left", "Right"):
         skin(pads[side], bones, [f"{side}UpperLeg", f"{side}LowerLeg"], relax=4)
+        skin(plates[side], bones, [f"{side}UpperLeg", f"{side}LowerLeg"], relax=4)
     for side, b in bands:
         skin(b, bones, [f"{side}UpperLeg", f"{side}LowerLeg"], relax=2)
     for side in ("Left", "Right"):
         skin(socks[side], bones, [f"{side}LowerLeg", f"{side}Foot"], relax=2)
-        skin(shoes[side][0], bones, [f"{side}Foot", f"{side}Toes"], power=6.0, relax=2)
+        for o in shoes[side]:
+            skin(o, bones, [f"{side}Foot", f"{side}Toes"], power=6.0, relax=2)
     log(f"weights in {time.time() - t1:.0f}s")
     for obj in bpy.data.collections[LOD0].objects:
         if obj.type == "MESH":

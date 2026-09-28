@@ -227,13 +227,16 @@ class Loft:
 
 
 class ZLoft:
-    """Vertical loft (torso): horizontal superellipse sections |x/w|^n + |(y - yc)/d|^n = 1 with separate
+    """Vertical loft (torso, head): horizontal superellipse sections |x/w|^n + |(y - yc)/d|^n = 1 with separate
     front and back depth and exponent, varying smoothly with height. stations rows
-    (z, half_width, y_front, y_back, n_front, n_back); rounded caps close the ends."""
+    (z, half_width, y_front, y_back, n_front, n_back[, y_wide]); y_wide (default: midway) is where the
+    section is widest, splitting the front and back halves. Rounded caps close the ends."""
 
     def __init__(self, stations, x0=0.0):
         st = np.asarray(stations, dtype=np.float64)
-        self.Z, self.V = smooth_table(st[:, 0], st[:, 1:6])
+        if st.shape[1] == 6:
+            st = np.hstack([st, 0.5 * (st[:, 2:3] + st[:, 3:4])])
+        self.Z, self.V = smooth_table(st[:, 0], st[:, 1:7])
         self.z0, self.z1 = float(st[0, 0]), float(st[-1, 0])
         self.x0 = x0
 
@@ -245,8 +248,7 @@ class ZLoft:
     def eval(self, P):
         z = P[..., 2]
         zc = np.clip(z, self.z0, self.z1)
-        w, yf, yb, nf, nb = _interp_cols(zc, self.Z, self.V)
-        yc = 0.5 * (yf + yb)
+        w, yf, yb, nf, nb, yc = _interp_cols(zc, self.Z, self.V)
         dy = P[..., 1] - yc
         ry = np.where(dy < 0, yc - yf, yb - yc)
         n = np.where(dy < 0, nf, nb)
@@ -338,6 +340,13 @@ class Field:
                     acc += w * d[i0[:, 0] + dx, i0[:, 1] + dy, i0[:, 2] + dz]
         out[inside] = acc
         return out
+
+    def drape(self, sigma, grow=0.0):
+        """Fabric bridging: Gaussian-smooth the distance field (sigma in m) so cloth spans small creases
+        and concavities instead of following them, then grow by `grow` to compensate shrinkage."""
+        from scipy import ndimage
+        self.d = ndimage.gaussian_filter(self.d, sigma / self.voxel, mode="nearest").astype(np.float32) - np.float32(grow)
+        return self
 
     def offset(self, amount):
         """Grow (positive) or shrink the solid."""

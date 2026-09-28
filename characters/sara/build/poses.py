@@ -114,9 +114,9 @@ def keyart(rig):
     aim(rig, "UpperChest", (-0.16, 0.1, 1.0), twist_deg=-6)
     # Reaching arm: long and nearly straight, out to her left and a little forward and up.
     aim(rig, "LeftShoulder", (0.95, -0.05, 0.1))
-    aim(rig, "LeftUpperArm", (0.9, -0.38, 0.05))
-    aim(rig, "LeftLowerArm", (0.9, -0.4, 0.12))
-    aim(rig, "LeftHand", (0.85, -0.42, 0.3), twist_deg=-75)
+    aim(rig, "LeftUpperArm", (0.9, -0.36, -0.22))
+    aim(rig, "LeftLowerArm", (0.9, -0.38, -0.16))
+    aim(rig, "LeftHand", (0.86, -0.42, -0.02), twist_deg=-75)
     # Loading arm: cocked up beside the head.
     aim(rig, "RightShoulder", (-0.93, 0.08, 0.3))
     aim(rig, "RightUpperArm", (-0.72, 0.28, 0.6))

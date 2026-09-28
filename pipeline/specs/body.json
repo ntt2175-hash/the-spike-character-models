@@ -4,14 +4,16 @@
   "note": "Body proportion master (pipeline/blender/spike_pipeline/modeling/body_master.py). A character's body = skeleton proportions (character.json 'proportions', consumed by spike_specs.apply_proportions) + volume multipliers (character.json 'body_shape'). 1.0 is the reference body: a realistic athletic 1.66 m woman. Change relationships between segments, never a uniform scale. Ranges are what the validator accepts; values outside them read as distorted anatomy.",
   "reference": {"height_m": 1.66, "torso_length_m": 0.4671, "leg_ratio": 0.53, "head_units": 7.2},
   "skeleton_params": {
-    "height_m":       {"range": [1.3, 2.1],   "desc": "Total height."},
-    "head_units":     {"range": [5.5, 9.0],   "desc": "Height / head height (head incl. hair volume). Lower = bigger head."},
-    "leg_ratio":      {"range": [0.48, 0.6],  "desc": "Leg length: hip-joint height / height. Raising it lengthens thigh and shin (the ankle and foot keep their height) and shortens the torso, so the character reads taller without being taller."},
-    "neck_length":    {"range": [0.7, 1.4],   "desc": "Neck length vs reference; sets the neck base, and with leg_ratio the torso length."},
+    "height_m":       {"range": [1.3, 2.1],    "desc": "Total height."},
+    "head_units":     {"range": [5.5, 9.0],    "desc": "Height / head height (head incl. hair volume). Lower = bigger head."},
+    "leg_ratio":      {"range": [0.48, 0.6],   "desc": "Leg length: hip-joint height / height. Raising it lengthens thigh and shin (the ankle and foot keep their height) and shortens the torso, so the character reads taller without being taller."},
+    "head_scale":     {"range": [0.9, 1.4],    "desc": "Modeled head size (1.0 = reference anime head, 0.167 m chin to crown). Judge with head_units: the head-to-body relationship, not the head alone."},
+    "thigh_to_shin":  {"range": [0.9, 1.25],   "desc": "Thigh length (hip->knee) / shin length (knee->ankle). Real ~1.08-1.1."},
+    "neck_length":    {"range": [0.7, 1.4],    "desc": "Neck length vs reference; sets the neck base, and with leg_ratio the torso length."},
     "shoulder_width": {"range": [0.72, 1.2],   "desc": "Shoulder joint spacing."},
-    "hip_width":      {"range": [0.7, 1.2],   "desc": "Hip joint spacing (leg stance width)."},
-    "arm_length":     {"range": [0.9, 1.15],  "desc": "Arm chain length (upper arm and forearm together, balanced)."},
-    "hand_scale":     {"range": [0.85, 1.2],  "desc": "Hand bone scale (palm + fingers)."},
+    "hip_width":      {"range": [0.7, 1.2],    "desc": "Hip joint spacing (leg stance width)."},
+    "arm_length":     {"range": [0.9, 1.15],   "desc": "Arm chain length (upper arm and forearm together, balanced)."},
+    "hand_scale":     {"range": [0.85, 1.2],   "desc": "Hand bone scale (palm + fingers)."},
     "foot_scale":     {"range": [0.75, 1.15],  "desc": "Foot bone scale (drives shoe length)."}
   },
   "shape_params": {
@@ -38,6 +40,21 @@
     "foot_width":        {"range": [0.7, 1.2],  "desc": "Foot width (drives shoe width)."},
     "hand_width":        {"range": [0.7, 1.2],  "desc": "Palm width."},
     "finger_thickness":  {"range": [0.7, 1.2],  "desc": "Finger radius (taper is fixed)."}
+  },
+  "head_shape_params": {
+    "width":       {"range": [0.85, 1.15],  "desc": "Overall head width (cranium + face)."},
+    "depth":       {"range": [0.85, 1.15],  "desc": "Skull depth behind the face (the back of the head)."},
+    "cranium":     {"range": [0.85, 1.15],  "desc": "Eye line to crown: vault height."},
+    "face_length": {"range": [0.85, 1.15],  "desc": "Eye line to chin: lower face length."},
+    "cheek":       {"range": [0.0, 2.0],    "desc": "Midface cheek volume under the eyes, beside the nose."},
+    "jaw":         {"range": [0.85, 1.15],  "desc": "Lower-face width at the jaw."},
+    "jaw_round":   {"range": [0.6, 1.4],    "desc": "Jaw contour: below 1 sharper / more V-shaped, above 1 softer / rounder."},
+    "chin":        {"range": [0.0, 2.0],    "desc": "Chin volume."},
+    "nose":        {"range": [0.5, 1.5],    "desc": "Nose size and projection (bridge, tip, wings)."},
+    "lips":        {"range": [0.0, 1.6],    "desc": "Lip volume."},
+    "socket":      {"range": [0.0, 2.0],    "desc": "Eye socket depth."},
+    "brow":        {"range": [0.0, 2.0],    "desc": "Brow ridge volume."},
+    "ear":         {"range": [0.7, 1.3],    "desc": "Ear size."}
   },
   "silhouette_checks": {
     "note": "Measured by pipeline/tools/silhouette_compare.py on orthographic renders; ratios are widths at the landmark divided by the head width.",
