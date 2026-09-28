@@ -155,29 +155,32 @@ def paint_face(path, px=2048):
         c.paint(c.mask_gauss(ex + sx * 2.0, ez - 10.2 * k, 12.5 * k, 3.0 * k), "#f3b3c2", 0.55)
         c.paint(c.mask_gauss(ex + sx * 15.0 * k, ez + 1.0 * k, 3.5 * k, 4.0 * k), "#f0a9ba", 0.35)
         c.paint(c.mask_gauss(ex + sx * 1.0, ez + 11.5 * k, 11.0 * k, 2.2 * k), "#f5c6cf", 0.35)   # upper lid tint
-        # Brows: thin, dark, straight, inner end lower (focus).
-        brow = [(ex - sx * 13.0 * k, ez + 13.4 * k), (ex - sx * 2.5 * k, ez + 15.6 * k), (ex + sx * 8.5 * k, ez + 16.4 * k),
-                (ex + sx * 15.5 * k, ez + 14.8 * k)]
-        c.paint(c.mask_stroke(brow, [1.3, 1.75, 1.35, 0.3], blur_mm=0.06), "#2a1d24", 0.97)
+        # Brows (front reference): thin, long, gently arched lines well above the lid, running past the
+        # outer corner; the inner end starts above the inner corner.
+        brow = [(ex - sx * 12.5 * k, ez + 14.6 * k), (ex - sx * 3.0 * k, ez + 17.4 * k), (ex + sx * 7.0 * k, ez + 17.9 * k),
+                (ex + sx * 15.5 * k, ez + 15.6 * k), (ex + sx * 19.0 * k, ez + 13.8 * k)]
+        c.paint(c.mask_stroke(brow, [1.1, 1.6, 1.5, 1.0, 0.25], blur_mm=0.06), "#2a1d24", 0.97)
     # Nose: tiny shadow tick + a soft pink bridge flush (the reference's nose is almost only shadow).
     nz = LANDMARKS["nose_tip_z"] * 1000
     c.paint(c.mask_gauss(0.0, nz + 9.0, 3.0, 9.0), "#f4bcc7", 0.35)
     c.paint(c.mask_gauss(0.3, nz + 0.4, 1.8, 1.2), "#eea3b1", 0.55)
     c.paint(c.mask_stroke([(-1.9, nz + 1.4), (-1.2, nz - 0.2), (0.4, nz - 0.6)], [0.2, 0.5, 0.15], blur_mm=0.08), "#b87a88", 0.7)
-    # Mouth: small, parted exhale with a hint of upper teeth.
+    # Mouth (front reference): a small, slightly parted, confident smile; flat upper edge with the
+    # corners lifted, a crescent opening, a band of upper teeth, a soft pink lower lip.
     mz = LANDMARKS["mouth_z"] * 1000
-    mouth = [(x * 0.95 * HS, mz + dy * HS) for x, dy in ((-4.4, 0.4), (-2.2, 1.5), (0.0, 1.7), (2.3, 1.45), (4.3, 0.3),
-                                                     (2.3, -1.9), (0.0, -2.4), (-2.3, -1.85))]
-    mouth_poly = paint.catmull(mouth, 12, closed=True)
+    P = lambda pts: [(x * HS, mz + dy * HS) for x, dy in pts]  # noqa: E731
+    mouth_poly = paint.catmull(P([(-6.0, 0.75), (-3.4, 1.1), (0.0, 1.2), (3.4, 1.1), (6.0, 0.75), (3.8, -0.95),
+                                  (0.0, -1.55), (-3.8, -0.95)]), 12, closed=True)
     m_mask = c.mask_polygon(mouth_poly, blur_mm=0.07)
-    c.paint(m_mask, "#6e3040", 0.96)
-    c.paint(c.mask_gauss(0.0, mz - 1.3, 2.4, 0.9) * m_mask, "#b0566a", 0.75)            # tongue
-    teeth = c.mask_polygon(paint.catmull([(-3.0, mz + 0.95), (0.0, mz + 1.45), (3.0, mz + 0.85), (2.3, mz + 0.1),
-                                          (0.0, mz + 0.3), (-2.3, mz + 0.12)], 10, closed=True), blur_mm=0.05)
+    c.paint(m_mask, "#7a3444", 0.96)
+    c.paint(c.mask_gauss(0.0, mz - 1.0 * HS, 3.2 * HS, 0.7 * HS) * m_mask, "#c0667a", 0.7)          # tongue
+    teeth = c.mask_polygon(paint.catmull(P([(-4.7, 0.85), (0.0, 1.1), (4.7, 0.85), (4.1, 0.2), (0.0, 0.32), (-4.1, 0.2)]),
+                                         10, closed=True), blur_mm=0.05)
     c.paint(teeth * m_mask, "#fbf6f7", 0.95)
-    c.paint(c.mask_stroke([(-4.3, mz + 0.5), (-1.8, mz + 1.75), (1.8, mz + 1.7), (4.2, mz + 0.4)], [0.15, 0.36, 0.36, 0.15],
-                          blur_mm=0.1), "#94505f", 0.55)                                   # upper lip line
-    c.paint(c.mask_gauss(0.0, mz - 4.6, 3.4, 1.1), "#f2b6c0", 0.45)                     # lower lip light
+    c.paint(c.mask_stroke(P([(-6.7, 1.25), (-5.8, 0.8), (-3.0, 1.15), (0.0, 1.25), (3.0, 1.15), (5.8, 0.8), (6.7, 1.25)]),
+                          [0.08, 0.26, 0.3, 0.32, 0.3, 0.26, 0.08], blur_mm=0.1), "#8a4656", 0.7)    # upper lip line
+    c.paint(c.mask_gauss(0.0, mz - 3.0 * HS, 3.8 * HS, 0.9 * HS), "#f1acb9", 0.5)                   # lower lip
+    c.paint(c.mask_gauss(0.0, mz - 4.6 * HS, 2.6 * HS, 0.6 * HS), "#e7a5b1", 0.25)                  # under-lip shadow
     c.save(path, alpha=False)
     log("painted", path)
     return path
@@ -187,13 +190,16 @@ def paint_face(path, px=2048):
 # scaled by EYE_SCALE on the face).
 # Sara's eye: a large but horizontal almond opening (aspect ~2:1), the outer corner lifted, a strong
 # upper lid; the iris is sized INSIDE the opening (its top tucks under the lid), never a round button.
-INNER = (-15.6, 0.2)
-OUTER = (17.0, 3.0)
-UPPER_LID = [INNER, (-12.5, 5.2), (-5.5, 8.6), (2.0, 9.4), (9.5, 8.3), (14.5, 5.8), OUTER]
-LOWER_LID = [INNER, (-11.5, -3.8), (-4.0, -6.6), (3.5, -7.0), (10.5, -5.2), OUTER]
+# Front reference: the upper lid rises fast from the inner corner and runs almost flat to a lifted outer
+# corner, where a sharp liner wing flicks up and out; the lower lid is soft and faint.
+INNER = (-15.6, 0.0)
+OUTER = (17.2, 3.4)
+UPPER_LID = [INNER, (-12.6, 5.0), (-6.0, 8.2), (1.5, 9.1), (8.5, 8.6), (13.8, 6.6), OUTER]
+LOWER_LID = [INNER, (-11.5, -4.0), (-4.0, -6.9), (3.5, -7.3), (10.5, -5.6), (14.8, -2.4), OUTER]
+WING = (22.8, 6.4)
 CORNER_Y = 1.3
-IRIS_C = (0.8, -0.5)
-IRIS_R = (7.9, 8.8)
+IRIS_C = (0.8, -0.2)
+IRIS_R = (8.0, 8.9)
 
 
 def _opening_polygon():
@@ -206,7 +212,7 @@ def paint_eye_white(path, px=2048):
     opening = c.mask_polygon(_opening_polygon(), blur_mm=0.1)
     c.paint(np.ones_like(opening), c.vertical_gradient(10.0, 0.5, "#9aa4c4", "#f7f6fc"), 1.0)   # lid shadow
     c.paint(c.mask_gauss(-14.0, 0.2, 2.2, 1.8), "#f0a9b8", 0.8)       # inner corner
-    c.paint(c.mask_gauss(15.2, 1.8, 2.4, 1.6), "#efb9c5", 0.55)       # outer corner
+    c.paint(c.mask_gauss(15.4, 2.2, 2.4, 1.6), "#efb9c5", 0.55)       # outer corner
     # Pink waterline along the lower lid.
     lower = paint.catmull(LOWER_LID, 20)
     wl = c.mask_stroke([(x, y + 0.55) for x, y in lower[4:-4:2]], [0.3, 0.9, 1.0, 0.9, 0.3], blur_mm=0.25)
@@ -278,45 +284,44 @@ def paint_iris(path, px=2048, palette=None, mirror_highlights=False):
 
 
 def paint_lash(path, px=2048):
-    """Upper lash line with individual lashes, crease, lower lashes. Alpha texture (upper half = upper lid)."""
+    """Upper lid: one heavy liner line (fine at the inner corner, heaviest over the outer third) ending in
+    a sharp wing that flicks up and out, two or three lash spikes on the outer half, a faint crease; the
+    lower lid is a soft, faint line with a few ticks at the outer corner (front reference). Alpha texture."""
     c = paint.Canvas(50, 50, px, (-25, -25), supersample=2, background=(*paint.hex_rgb("#211a20"), 0.0))
     col = "#1b1418"
     upper = paint.catmull(UPPER_LID, 20)
     n = len(upper)
-    # Main line: fine at the inner corner, heavy and sharp over the outer third, outward wing.
-    line_pts = [(INNER[0] + 0.3, INNER[1] + 0.5)] + UPPER_LID[1:-1] + [(OUTER[0] + 0.3, OUTER[1] + 0.5), (21.6, 4.2)]
-    polys = [c.stroke_polygon(line_pts, [0.45, 1.0, 1.45, 1.85, 2.5, 2.9, 2.3, 0.25])]
-    # Upper lashes: clumped, long toward the outer corner, sweeping outward.
-    rng = np.random.default_rng(5)
-    for i in range(14):
-        u = 0.32 + 0.66 * (i / 13.0) ** 0.75
+    # Main line + wing: the line sits on the lid edge, so its lower half covers the top of the eye (heavy lid).
+    line_pts = [(INNER[0] + 0.4, INNER[1] + 0.6)] + UPPER_LID[1:-1] + [(OUTER[0] + 0.2, OUTER[1] + 0.35), WING]
+    polys = [c.stroke_polygon(line_pts, [0.5, 1.1, 1.8, 2.3, 2.7, 2.9, 1.8, 0.08])]
+    # Inner-corner tick: a short line pointing down and in.
+    polys.append(c.stroke_polygon([(INNER[0] + 0.6, INNER[1] + 0.5), (INNER[0] - 1.6, INNER[1] - 0.9)], [0.5, 0.06], samples=6))
+    # Lash spikes on the outer half, sweeping up and outward.
+    for u, length, lean in ((0.6, 2.4, 0.55), (0.74, 3.0, 0.75), (0.87, 3.3, 0.95)):
         j = min(int(u * (n - 1)), n - 2)
         x, y = upper[j]
         x2, y2 = upper[j + 1]
         tx, ty = x2 - x, y2 - y
         ln = math.hypot(tx, ty) or 1.0
         nx, ny = -ty / ln, tx / ln
-        length = 1.8 + 4.2 * u ** 1.6 + rng.uniform(-0.3, 0.3)
-        lean = 0.45 + 1.1 * u
-        p1 = (x + nx * length * 0.5 + tx / ln * lean * length * 0.3, y + ny * length * 0.5 + 0.25)
-        p2 = (x + nx * length * 0.9 + tx / ln * lean * length * 0.8, y + ny * length * 0.75 + 0.1)
-        polys.append(c.stroke_polygon([(x + nx * 0.4, y + ny * 0.4), p1, p2], [0.8, 0.42, 0.04], samples=8))
-    for (x0, y0), (x1, y1), w in (((16.4, 3.6), (21.8, 4.6), 0.75), ((17.2, 2.8), (22.4, 2.2), 0.6), ((15.2, 5.2), (19.6, 7.6), 0.7)):
-        polys.append(c.stroke_polygon([(x0, y0), ((x0 + x1) / 2, (y0 + y1) / 2 + 0.5), (x1, y1)], [w, w * 0.6, 0.05], samples=10))
+        p1 = (x + nx * length * 0.55 + tx / ln * lean * length * 0.35, y + ny * length * 0.55)
+        p2 = (x + nx * length + tx / ln * lean * length, y + ny * length * 0.95)
+        polys.append(c.stroke_polygon([(x + nx * 0.9, y + ny * 0.9), p1, p2], [1.0, 0.5, 0.04], samples=8))
+    # A second, shorter flick under the wing.
+    polys.append(c.stroke_polygon([(OUTER[0] - 0.4, OUTER[1] - 0.3), (19.4, 2.9), (21.4, 3.3)], [0.8, 0.4, 0.04], samples=8))
     c.paint(c.mask_polygons(polys, blur_mm=0.035), col, 1.0)
-    # Crease (double eyelid) over the middle/outer part.
-    crease = [(-4.0, 13.6), (2.5, 14.4), (9.5, 12.9), (15.0, 9.8)]
-    c.paint(c.mask_stroke(crease, [0.12, 0.38, 0.34, 0.06], blur_mm=0.08), "#7d4c5a", 0.85)
-    # Lower lid line and lower lashes: continuous over the outer 70%, darker toward the corner.
+    # Crease (double eyelid), faint, over the middle / outer part.
+    crease = [(-3.0, 13.0), (3.5, 13.7), (10.0, 12.6), (15.0, 9.9)]
+    c.paint(c.mask_stroke(crease, [0.1, 0.3, 0.26, 0.05], blur_mm=0.08), "#7d4c5a", 0.6)
+    # Lower lid: a soft, faint line over the outer 55 %, three small ticks at the outer corner.
     lower = paint.catmull(LOWER_LID, 20)
     m = len(lower)
-    polys = [c.stroke_polygon([(x, y - 0.25) for x, y in lower[int(0.3 * m):int(0.97 * m):2]], [0.12, 0.35, 0.5, 0.62, 0.3],
+    polys = [c.stroke_polygon([(x, y - 0.25) for x, y in lower[int(0.45 * m):int(0.97 * m):2]], [0.08, 0.26, 0.36, 0.2],
                               samples=6)]
-    for i in range(12):
-        u = 0.45 + 0.5 * i / 11.0
+    for u in (0.8, 0.87, 0.93):
         x, y = lower[int(u * (m - 1))]
-        polys.append(c.stroke_polygon([(x, y - 0.3), (x + 0.6 + 0.9 * u, y - 1.2 - 1.3 * u)], [0.28, 0.03], samples=6))
-    c.paint(c.mask_polygons(polys, blur_mm=0.04), "#3a2a33", 0.92)
+        polys.append(c.stroke_polygon([(x, y - 0.3), (x + 0.7, y - 1.5)], [0.26, 0.03], samples=6))
+    c.paint(c.mask_polygons(polys, blur_mm=0.04), "#4a3039", 0.7)
     c.save(path)
     log("painted", path)
     return path

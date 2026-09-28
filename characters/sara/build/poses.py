@@ -139,3 +139,20 @@ def keyart(rig):
     stream_chain(rig, "hair_ponytail_C", [(-0.3, 0.65, 0.2), (-0.75, 0.5, -0.05), (-0.95, 0.25, -0.2)])
     stream_chain(rig, "ribbon_tail_A", [(-0.4, 0.5, 0.6), (-0.8, 0.3, 0.5), (-0.9, 0.1, 0.4)])
     stream_chain(rig, "ribbon_loop_A", [(-0.2, 0.1, 0.97)])
+
+
+def portrait(rig):
+    """The standing presentation pose of the front reference (sara_standing_front34.png): weight on her
+    left leg, her right hand raised to the collarbone (elbow low beside the waist), the left arm behind
+    her back, the head turned a little toward her right and tilted toward her left."""
+    stand(rig)
+    aim(rig, "RightUpperArm", (-0.1, -0.1, -1.0))
+    aim(rig, "RightLowerArm", (0.55, -0.4, 0.74))
+    aim(rig, "RightHand", (0.3, -0.3, 0.9), twist_deg=-70)
+    curl_fingers(rig, "Right", 18, thumb_deg=8)
+    aim(rig, "LeftUpperArm", (0.08, 0.14, -1.0))
+    aim(rig, "LeftLowerArm", (-0.4, 0.45, -0.8))
+    aim(rig, "LeftHand", (-0.6, 0.3, -0.7), twist_deg=20)
+    aim(rig, "Neck", (0.03, -0.04, 1.0))
+    aim(rig, "Head", (0.1, -0.04, 1.0), twist_deg=-16)
+    ground(rig, "Left")

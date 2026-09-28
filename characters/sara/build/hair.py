@@ -281,17 +281,17 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
                 pts.append(c + side * (0.0042 * math.sin(a) * taper) + nrm * (0.0019 * math.sin(2 * a) * taper))
             add(pts, 0.0094, 0.0046, "braid", samples=4, tip_start=0.94, root_min=0.6, crescent=0.05)
 
-    # --- 3. fringe: ONE mass from high on the head, cut at the edge into pointed locks of varied length ---
-    # Tips: (x, dz above the eye line (x HS), sweep, tag). The part sits left of center (PART_X); locks
-    # right of it sweep toward her right, locks left of it toward her left, the long ones reach down over
-    # the upper lids and between the eyes, the outer ones frame the eye corners and lead into the side
-    # locks. Irregular spacing and lengths (never a comb), but every lock grows out of the same mass: no
-    # stray strand stands off the forehead.
+    # --- 3. fringe: ONE mass from high on the head, cut at the edge into pointed locks ---------------------
+    # Tips: (x, dz above the eye line (x HS), sweep, tag). Front reference: a nearly straight cut at the
+    # brow line (the brows show between the tips), slight irregular separations, a few longer locks that
+    # touch the upper lids, the shortest locks at the part (left of center), long side locks framing the
+    # outer eye corners. Locks sweep gently away from the part. Every lock grows out of the same mass: no
+    # stray strand stands off the forehead, and no deep saw-tooth.
     PART_X = 0.022
-    tips = [(-0.074, -0.006, -0.008, "bang_C"), (-0.058, 0.012, -0.009, "bang_C"), (-0.041, 0.001, -0.011, "bang_C"),
-            (-0.024, 0.017, -0.008, "bang_B"), (-0.007, -0.002, -0.009, "bang_B"), (0.009, 0.019, -0.004, "bang_B"),
-            (0.027, 0.012, 0.003, "bang_A"), (0.045, 0.0, 0.007, "bang_A"), (0.061, 0.014, 0.007, "bang_A"),
-            (0.077, -0.003, 0.006, "bang_A")]
+    tips = [(-0.077, 0.001, -0.006, "bang_C"), (-0.061, 0.015, -0.006, "bang_C"), (-0.045, 0.019, -0.007, "bang_C"),
+            (-0.029, 0.012, -0.007, "bang_B"), (-0.013, 0.02, -0.006, "bang_B"), (0.004, 0.016, -0.004, "bang_B"),
+            (0.02, 0.021, 0.0, "bang_A"), (0.036, 0.017, 0.004, "bang_A"), (0.052, 0.012, 0.006, "bang_A"),
+            (0.066, 0.018, 0.006, "bang_A"), (0.08, 0.003, 0.006, "bang_A")]
     cx = np.array([t[0] for t in tips])
     cz = np.array([EYE_Z + t[1] * HS for t in tips])
     csw = np.array([t[2] for t in tips])
@@ -311,7 +311,7 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
             return cz[-1] + (cap_z(x) - cz[-1]) * t ** 0.7
         k = int(np.searchsorted(cx, x) - 1)
         t = (x - cx[k]) / (cx[k + 1] - cx[k])
-        zn = min(cap_z(x), max(cz[k], cz[k + 1]) + 0.017 * HS)
+        zn = min(cap_z(x), max(cz[k], cz[k + 1]) + (0.008 + 0.003 * (k % 3 == 1)) * HS)   # shallow, uneven notches
         if t < 0.5:
             return cz[k] + (zn - cz[k]) * (2 * t) ** 0.7
         return cz[k + 1] + (zn - cz[k + 1]) * (2 * (1 - t)) ** 0.7
@@ -361,8 +361,8 @@ def build(bones, batch_hair: L.LockBatch, batch_ribbon: L.LockBatch):
         free["hair"].append(_along_at(column(cx[k], cz[k])[1], 2))
     # Layering: a few broad clumps lying ON the fringe (same flow, a little in front of it), ending at
     # different lengths, so the fringe reads as overlapping hair with depth instead of one cut edge.
-    for x, dz, sw, w, tag in ((-0.047, 0.007, -0.013, 0.026, "bang_C"), (-0.016, 0.009, -0.011, 0.022, "bang_B"),
-                              (0.036, 0.006, 0.006, 0.024, "bang_A"), (0.068, 0.004, 0.008, 0.02, "bang_A")):
+    for x, dz, sw, w, tag in ((-0.051, 0.016, -0.009, 0.02, "bang_C"), (-0.02, 0.015, -0.008, 0.018, "bang_B"),
+                              (0.044, 0.014, 0.005, 0.019, "bang_A"), (0.072, 0.011, 0.007, 0.017, "bang_A")):
         _, ctrl = column(x, EYE_Z + dz * HS, lift=0.0028, sw=sw)
         add(ctrl[1:], w * HS, 0.0034, tag, free_at=1, tip_start=0.5, tip_power=0.8, root_min=0.35, crescent=0.25,
             thickness_fn=lambda u: 0.3 + 0.7 * L._smooth(0.0, 0.2, u))

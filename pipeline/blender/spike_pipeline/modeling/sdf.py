@@ -365,7 +365,9 @@ class Field:
 
         verts, faces, _normals, _vals = measure.marching_cubes(self.d, level=level, spacing=(self.voxel,) * 3,
                                                                 gradient_direction="ascent")
-        return verts + self.origin, faces
+        # skimage winds these triangles clockwise seen from outside; reverse them so every surface has
+        # outward (right-handed) normals: decals, inverted-hull outlines and back-face culling rely on it.
+        return verts + self.origin, faces[:, ::-1].copy()
 
 
 # ---------------------------------------------------------------------------

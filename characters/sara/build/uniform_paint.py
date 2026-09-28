@@ -14,17 +14,20 @@ from spike_pipeline.modeling import paint
 from common import log
 
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+SCRIPT_FONT = "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"   # team wordmark
 JERSEY_Y0, JERSEY_Z0, JERSEY_Z1 = 0.0, 0.86, 1.43
+CHEST_Z = 1.2
 SHORTS_Y0, SHORTS_Z0, SHORTS_Z1 = 0.005, 0.74, 1.02
 _REF_JERSEY_MM = 570.0        # print layout below is authored for a 570 mm jersey panel
 
 
 def configure(bones):
     """Place the print canvases from the body landmarks (the prints follow the proportions)."""
-    global JERSEY_Z0, JERSEY_Z1, SHORTS_Z0, SHORTS_Z1
+    global JERSEY_Z0, JERSEY_Z1, SHORTS_Z0, SHORTS_Z1, CHEST_Z
     import body
     lm = body.landmarks(bones)
     JERSEY_Z0, JERSEY_Z1 = lm["hem_z"] - 0.07, lm["neck_z"] + 0.083
+    CHEST_Z = body.master(bones).bust_apex()[0]
     SHORTS_Z0, SHORTS_Z1 = lm["hip_z"] - 0.14, lm["hip_z"] + 0.14
 
 
@@ -77,8 +80,29 @@ def paint_jersey(path, pal, px=2048):
         polys.append(c.stroke_polygon(spiral[::2], [3.8, 3.2, 2.2, 0.4], samples=10))
     swirl = c.mask_polygons(polys, blur_mm=0.35) * front
     c.paint(swirl, pal["jersey_print"], 0.75)
-    # Numbers: front (her right of center, chest) and back (centered, larger).
-    c.text("2", 452, 330 * k, 155 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
+    # Four-point sparkles and a thin ring on the lower front, toward her left (front reference).
+    for sx_, sy_, r_ in ((575, 205, 26), (515, 238, 12), (640, 150, 9)):
+        sy_ *= k
+        arms = []
+        for ang in (0.0, math.pi / 2, math.pi, 1.5 * math.pi):
+            tip = (sx_ + 1.25 * r_ * math.cos(ang), sy_ + r_ * k * math.sin(ang))
+            arms.append(c.stroke_polygon([(sx_, sy_), tip], [r_ * 0.16, 0.02], samples=8))
+        c.paint(c.mask_polygons(arms, blur_mm=0.25) * front, "#ffffff", 0.95)
+    ring = [(575 + 1.25 * 44 * math.cos(t), 205 * k + 44 * k * math.sin(t)) for t in np.linspace(0, 2 * math.pi, 60)]
+    c.paint(c.mask_stroke(ring, [1.6] * len(ring), blur_mm=0.25) * front, "#ffffff", 0.8)
+    # Chest: the team wordmark across the bust line, the number centered below it, a crest on her left chest.
+    cz = (CHEST_Z - JERSEY_Z0) * 1000
+    c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=5, stroke_color="#a9c9e6")
+    c.text("weasels", 500, cz + 38 * k, 70 * k, "#f4f8fc", SCRIPT_FONT, stroke_mm=2.2, stroke_color="#13254a")
+    c.text("2", 500, cz - 62 * k, 125 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
+    crest = [(612, cz + 118 * k), (648, cz + 124 * k), (684, cz + 118 * k), (682, cz + 96 * k), (648, cz + 76 * k),
+             (614, cz + 96 * k)]
+    c.paint(c.mask_polygon(crest, blur_mm=0.4), "#e8f2fb", 1.0)
+    inner = [(622, cz + 113 * k), (648, cz + 118 * k), (674, cz + 113 * k), (672, cz + 98 * k), (648, cz + 83 * k),
+             (624, cz + 98 * k)]
+    c.paint(c.mask_polygon(inner, blur_mm=0.3), "#5e9fd6", 1.0)
+    c.text("W", 648, cz + 100 * k, 26 * k, "#f4f8fc", SCRIPT_FONT)
+    # Back number (centered, larger; the back seam is at u = 0 / 1).
     c.text("2", 1000 * 0.02, 260 * k, 190 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
     c.text("2", 1000 * 0.98 + 40, 260 * k, 190 * k, pal["jersey_print"], FONT, stroke_mm=6, stroke_color="#1a2a48")
     c.save(path, alpha=False)
@@ -99,8 +123,8 @@ def paint_shorts(path, pal, px=1024):
         c.paint(c.mask_polygon(left + right, blur_mm=0.4), pal["shorts_side"], 1.0)
         front_edge = left if side > 0 else right[::-1]
         c.paint(c.mask_stroke(front_edge[::3], [4.0] * len(front_edge[::3]), blur_mm=0.3), pal["jersey_piping"], 1.0)
-    # Small "2" on the right-leg side panel.
-    c.text("2", 500 - 250, 70, 45, pal["jersey_print"], FONT)
+    # Small "2" low on the outside front of her left leg (front reference).
+    c.text("2", 500 + 175, 48, 42, pal["jersey_print"], FONT)
     c.save(path, alpha=False)
     log("painted", path)
     return path

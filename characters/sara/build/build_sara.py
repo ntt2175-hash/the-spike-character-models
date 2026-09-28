@@ -179,7 +179,10 @@ def cut_surface(obj, keeps, snap_iters=4):
 def thicken(obj, thickness):
     m = obj.modifiers.new("thickness", "SOLIDIFY")
     m.thickness = thickness
-    m.offset = -1.0
+    # The cut surface has outward normals: grow the shell outward (away from the skin) and flip, so the
+    # original layer faces the body and the new outer layer faces out.
+    m.offset = 1.0
+    m.use_flip_normals = True
     m.use_rim = True
     # Plain offset: every vertex moves exactly `thickness` along its normal. Even offset divides by the
     # angle between face normals and exploded into spikes at sharp cut corners.

@@ -1,8 +1,8 @@
 """Head master: a stylized anime head sculpted from primary forms, for every character.
 
 Construction order (never details before the primary forms are right):
-  primary mass (one smooth loft: cranium, forehead, face plane, cheeks, jaw, chin in a single silhouette)
-  -> midface cheek volume -> chin -> eye sockets and brow -> nose (bridge, tip, wings, underside plane)
+  primary mass (one smooth loft: cranium, forehead, face plane, cheeks, jaw, chin in a single silhouette;
+  midface cheek fullness is part of its sections) -> chin -> eye sockets and brow -> nose (bridge, tip, wings, underside plane)
   -> lips and mouth -> ears (helix, lobe, concha)
 
 The primary mass is a vertical loft of horizontal superellipse sections (PROFILE), so the head reads
@@ -44,19 +44,20 @@ EYE_T = LOWER / (LOWER + UPPER)
 # Reference primary mass (head_scale 1). Rows: t (0 chin .. 1 crown), half width, y front, y back,
 # y at the widest point (splits the front / back halves), front squareness (2 = elliptic, higher = a
 # flatter face plane). y is measured from the head axis, the face looks toward -Y.
-# Soft oval with a small chin: the jaw widens early out of the chin (no V), the widest point of the
-# lower face sits back toward the ear, the face plane is broad and flat across the eyes.
+# Soft oval with a small chin: the jaw line is gently convex (it widens a little faster near the chin
+# and slower toward the cheekbone: no straight V, no round jowl), the widest point of the lower face
+# sits back toward the ear, the face plane is broad and flat across the eyes.
 PROFILE = np.array([
     # t     half_w   y_front  y_back   y_wide   n_front
     [0.000, 0.0008, -0.0585, -0.0545, -0.0565, 2.0],    # chin tip: a soft point, not a ball
-    [0.006, 0.0065, -0.0620, -0.0495, -0.0555, 2.0],
-    [0.015, 0.0135, -0.0660, -0.0430, -0.0505, 2.1],
-    [0.050, 0.0270, -0.0715, -0.0320, -0.0450, 2.2],
-    [0.100, 0.0385, -0.0772, -0.0140, -0.0380, 2.25],
-    [0.160, 0.0495, -0.0800, 0.0060, -0.0280, 2.35],
-    [0.220, 0.0585, -0.0820, 0.0280, -0.0170, 2.45],
-    [0.280, 0.0672, -0.0835, 0.0520, -0.0070, 2.55],
-    [0.340, 0.0740, -0.0845, 0.0750, 0.0010, 2.6],
+    [0.006, 0.0060, -0.0620, -0.0495, -0.0555, 2.0],
+    [0.015, 0.0120, -0.0660, -0.0430, -0.0505, 2.1],
+    [0.050, 0.0260, -0.0715, -0.0320, -0.0450, 2.2],
+    [0.100, 0.0380, -0.0772, -0.0140, -0.0380, 2.25],
+    [0.160, 0.0490, -0.0800, 0.0060, -0.0280, 2.35],
+    [0.220, 0.0578, -0.0820, 0.0280, -0.0170, 2.45],
+    [0.280, 0.0655, -0.0835, 0.0520, -0.0070, 2.55],
+    [0.340, 0.0725, -0.0845, 0.0750, 0.0010, 2.6],
     [0.420, 0.0788, -0.0850, 0.0930, 0.0060, 2.6],
     [0.500, 0.0810, -0.0850, 0.1030, 0.0090, 2.6],
     [0.600, 0.0812, -0.0835, 0.1075, 0.0110, 2.5],    # the vault: a round dome (superellipse n 2.5)
@@ -112,7 +113,10 @@ class Head:
             chin = _bump(t, -1.0, 0.0, 0.04, 0.2)
             w = hw * p["width"] * (1.0 + (p["jaw"] - 1.0) * jaw)
             w *= 1.0 + 0.12 * (p["jaw_round"] - 1.0) * chin           # a fuller (rounder) or narrower chin
-            n_front = nf + 0.6 * (p["jaw_round"] - 1.0) * jaw
+            # Midface cheek volume lives in the section shape (fuller front corners under the eyes), never in
+            # separate bumps: an ellipsoid wide enough to read as a cheek pokes out of the jaw silhouette.
+            cheek = _bump(t, 0.14, 0.24, 0.34, 0.44)
+            n_front = nf + 0.6 * (p["jaw_round"] - 1.0) * jaw + 0.35 * (p["cheek"] - 1.0) * cheek
             z = self.z_of(t)
             y0 = self.E[1]
             rows.append([z, w * s, y0 + yf * s, y0 + yb * s * p["depth"], n_front, 2.0, y0 + yw * s])
@@ -157,15 +161,13 @@ class Head:
         add = lambda prim, b: ops.append(("add", prim, b * s))  # noqa: E731
         sub = lambda prim, b: ops.append(("sub", prim, b * s))  # noqa: E731
         ex = self.ex / (s * p["width"])                         # eye center x in reference units
-        # 1. midface cheek volume: soft fullness under the eyes, beside the nose, fading into the jaw
-        for sx in (1.0, -1.0):
-            add(self.bump(sx * 0.044, -0.034, 0.0011 * p["cheek"], (0.026, 0.016, 0.022)), 0.02)
+        # (midface cheek volume: in the loft sections, see _stations)
         # 2. chin: small, present, rounded
         add(self.bump(0.0, -LOWER + 0.012, 0.0008 * p["chin"], (0.012, 0.008, 0.009)), 0.014)
         # 3. eye sockets: shallow orbital recesses so the eyes sit IN the face; a soft brow above
         for sx in (1.0, -1.0):
-            sub(self.dent(sx * ex, 0.0, 0.0010 * p["socket"], (0.022, 0.012, 0.015)), 0.014)
-            add(self.bump(sx * (ex - 0.004), 0.024, 0.0003 * p["brow"], (0.026, 0.01, 0.009)), 0.018)
+            sub(self.dent(sx * ex, 0.0, 0.0007 * p["socket"], (0.022, 0.012, 0.015)), 0.016)
+            add(self.bump(sx * (ex - 0.004), 0.024, 0.0002 * p["brow"], (0.026, 0.01, 0.009)), 0.018)
         # 4. nose: subtle bridge rising out of the face plane, small tip, soft wings, underside plane
         n = p["nose"]
         tip_dz = -0.0285
@@ -181,9 +183,9 @@ class Head:
         # 5. lips and mouth: small, with volume, set into the lower face (not stuck on)
         m_dz = -0.0502
         L = p["lips"]
-        add(self.bump(0.0, m_dz + 0.0034, 0.0011 * L, (0.0088, 0.0034, 0.0028 * L)), 0.007)
-        add(self.bump(0.0, m_dz - 0.0044, 0.0013 * L, (0.0076, 0.0036, 0.0032 * L)), 0.007)
-        sub(self.dent(0.0, m_dz, 0.0008, (0.0052, 0.0045, 0.0022)), 0.004)
+        add(self.bump(0.0, m_dz + 0.0032, 0.0006 * L, (0.0092, 0.0036, 0.0028 * L)), 0.008)
+        add(self.bump(0.0, m_dz - 0.0042, 0.0008 * L, (0.0078, 0.0038, 0.0032 * L)), 0.008)
+        sub(self.dent(0.0, m_dz, 0.0005, (0.0058, 0.0045, 0.0022)), 0.004)
         # 6. ears: helix body tilted back, lobe, concha; between the eye line and the nose base
         e = p["ear"]
         R = sdf.rotation_to(_v(0.0, 0.2, 0.98))
