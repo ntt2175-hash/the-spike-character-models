@@ -1,0 +1,76 @@
+{
+  "spec": "spike.animations",
+  "version": "1.0.0",
+  "description": "Standard animation library and the gameplay/animation timing contract. Clip ids are the Blender action names and the Godot animation names. A character-specific version of a clip is named '{clip}__{character}' (e.g. 'victory__sara') and is selected through character.json animation.overrides.",
+  "fps": 30,
+  "naming": {
+    "clip_pattern": "^[a-z][a-z0-9_]*(__[a-z0-9]+)?$",
+    "special_pattern": "^sp_[a-z0-9]+_[a-z0-9_]+$"
+  },
+  "events": {
+    "windup": "Anticipation begins (weight shifts against the coming action).",
+    "commit": "Anticipation ends; acceleration starts. Last frame where the action can still be cancelled.",
+    "takeoff": "Last foot leaves the floor.",
+    "apex": "Highest point of the jump.",
+    "contact": "Ball contact. Gameplay syncs to this event.",
+    "land": "First foot contact on landing.",
+    "foot_L": "Left footfall (dust, audio).",
+    "foot_R": "Right footfall.",
+    "toss": "Ball leaves the hand on a serve toss.",
+    "recover": "Earliest frame gameplay may blend into the next clip."
+  },
+  "timing_contract": {
+    "note": "Gameplay decides WHEN the ball is touched; animation decides HOW. SpikeCharacterActor.play_synced(clip, 'contact', seconds) scales playback so the event lands exactly on the gameplay time, within [min_speed, max_speed]. Outside that range, gameplay must choose a different clip (e.g. a quick attack instead of a full spike).",
+    "min_speed": 0.7,
+    "max_speed": 1.45,
+    "warp": "When personality anticipation_hold != 1 or release_snap != 1, playback time is remapped piecewise between 'windup', 'commit' and 'contact' so the character keeps its rhythm while still hitting the sync time."
+  },
+  "clips": [
+    {"id": "idle",          "category": "stance",     "loop": true,  "root_motion": false, "duration_s": [3.0, 6.0], "tier": "normal", "events": {}, "desc": "Relaxed between rallies. Personality lives here: weight shifts, hand habits, hair touches. Minimum 3 s before it repeats."},
+    {"id": "breath",        "category": "additive",   "loop": true,  "root_motion": false, "duration_s": [2.8, 4.2], "tier": "normal", "events": {}, "additive": true, "desc": "Additive chest/shoulder breathing layered on every stance. Faster and deeper after rallies (driven by an exertion parameter)."},
+    {"id": "ready_stance",  "category": "stance",     "loop": true,  "root_motion": false, "duration_s": [1.5, 2.5], "tier": "normal", "events": {}, "desc": "Receive-ready: knees bent, weight on the balls of the feet, arms forward. Small bounces."},
+    {"id": "walk",          "category": "locomotion", "loop": true,  "root_motion": true,  "duration_s": [0.9, 1.2], "tier": "normal", "events": {"foot_L": 0.0, "foot_R": 0.5}, "desc": ""},
+    {"id": "run",           "category": "locomotion", "loop": true,  "root_motion": true,  "duration_s": [0.55, 0.7],"tier": "normal", "events": {"foot_L": 0.0, "foot_R": 0.5}, "desc": ""},
+    {"id": "shuffle_left",     "category": "locomotion", "loop": true,  "root_motion": true,  "duration_s": [0.4, 0.55],"tier": "normal", "events": {"foot_L": 0.0, "foot_R": 0.5}, "desc": "Lateral defensive shuffle."},
+    {"id": "shuffle_right",     "category": "locomotion", "loop": true,  "root_motion": true,  "duration_s": [0.4, 0.55],"tier": "normal", "events": {"foot_L": 0.5, "foot_R": 0.0}, "desc": ""},
+    {"id": "turn_180",      "category": "locomotion", "loop": false, "root_motion": true,  "duration_s": [0.4, 0.6], "tier": "normal", "events": {"recover": 0.8}, "desc": "Sudden direction change: plant, drop the hips, head leads the turn."},
+    {"id": "approach",      "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.9, 1.3], "tier": "normal", "events": {"foot_R": 0.2, "foot_L": 0.55, "foot_R_2": 0.72, "takeoff": 1.0}, "desc": "Three-step spike approach (right-handed: R-L-R... ending with a double plant). Arms swing back on the penultimate step."},
+    {"id": "jump",          "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.5, 0.8], "tier": "normal", "events": {"windup": 0.0, "commit": 0.35, "takeoff": 0.55, "apex": 1.0}, "desc": "Standing jump (block/set). Deep load, explosive extension."},
+    {"id": "air_hang",      "category": "skill",      "loop": true,  "root_motion": false, "duration_s": [0.3, 0.5], "tier": "normal", "events": {}, "desc": "Holdable airborne pose for variable hang time."},
+    {"id": "land",          "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.4, 0.6], "tier": "normal", "events": {"land": 0.0, "recover": 0.65}, "desc": "Two-foot landing: absorb through ankles, knees, hips. Hair and hem keep falling after the body stops."},
+    {"id": "receive",       "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.5, 0.8], "tier": "normal", "events": {"windup": 0.0, "commit": 0.4, "contact": 0.55, "recover": 0.85}, "desc": "Forearm pass (bump). Platform set early, legs do the work, shoulders shrug toward the target."},
+    {"id": "dig_dive",      "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.8, 1.2], "tier": "s",      "events": {"commit": 0.2, "contact": 0.35, "land": 0.5, "recover": 0.9}, "desc": "Emergency dive dig with a slide recovery."},
+    {"id": "set",           "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.5, 0.8], "tier": "normal", "events": {"windup": 0.0, "commit": 0.45, "contact": 0.6, "recover": 0.85}, "desc": "Overhead set. Hands form the window above the forehead before the ball arrives; soft wrists."},
+    {"id": "serve_float",   "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [1.4, 2.0], "tier": "normal", "events": {"toss": 0.3, "windup": 0.35, "commit": 0.62, "contact": 0.72, "recover": 0.95}, "desc": "Standing float serve."},
+    {"id": "serve_jump",    "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [2.0, 2.8], "tier": "s",      "events": {"toss": 0.18, "takeoff": 0.55, "commit": 0.63, "contact": 0.7, "land": 0.85, "recover": 0.95}, "desc": "Jump serve with approach."},
+    {"id": "spike",         "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.7, 1.0], "tier": "normal", "events": {"windup": 0.0, "commit": 0.42, "contact": 0.55, "recover": 0.9}, "desc": "Airborne attack from takeoff to pre-landing. Bow-and-arrow load: non-hitting arm aims, hitting arm draws back, torso arches; then whip: hips, torso, shoulder, elbow, wrist in sequence."},
+    {"id": "block",         "category": "skill",      "loop": false, "root_motion": true,  "duration_s": [0.7, 1.0], "tier": "normal", "events": {"windup": 0.0, "commit": 0.3, "takeoff": 0.42, "contact": 0.62, "land": 0.9}, "desc": "Penetrating block: hands reach over the net, fingers spread and firm, shoulders shrug to the ears."},
+    {"id": "hit_reaction",  "category": "reaction",   "loop": false, "root_motion": false, "duration_s": [0.35, 0.6], "tier": "normal", "events": {"recover": 0.7}, "desc": "Ball-to-body flinch. Additive-friendly."},
+    {"id": "celebration",   "category": "presentation","loop": false,"root_motion": false, "duration_s": [1.2, 2.2], "tier": "normal", "events": {"recover": 0.9}, "desc": "Point won. Must be character-specific at S and above."},
+    {"id": "victory",       "category": "presentation","loop": false,"root_motion": false, "duration_s": [2.5, 4.0], "tier": "normal", "events": {}, "desc": "Match won, results screen. Character-specific at all tiers."},
+    {"id": "defeat",        "category": "presentation","loop": false,"root_motion": false, "duration_s": [2.0, 3.5], "tier": "normal", "events": {}, "desc": "Match lost."},
+    {"id": "point_lost",    "category": "reaction",   "loop": false, "root_motion": false, "duration_s": [1.0, 1.8], "tier": "s",      "events": {"recover": 0.85}, "desc": "Short frustration/reset beat."},
+    {"id": "select_intro",  "category": "presentation","loop": false,"root_motion": false, "duration_s": [1.5, 2.5], "tier": "s",      "events": {}, "desc": "Character-select entrance into the identity pose."},
+    {"id": "lobby_idle",    "category": "presentation","loop": true, "root_motion": false, "duration_s": [6.0, 10.0],"tier": "s",      "events": {}, "desc": "Menu idle with occasional personality actions."},
+    {"id": "rom_volleyball","category": "qc",         "loop": false, "root_motion": false, "duration_s": [8.0, 8.0], "tier": "normal", "events": {}, "desc": "Generated range-of-motion test (pipeline/blender/spike_pipeline/rom.py). Never shipped."}
+  ],
+  "poses": {
+    "note": "Single-frame poses used for QC renders and presentation. Stored as actions named 'pose_{id}' with one key on frame 1.",
+    "rest": "The A-pose rest pose (no action).",
+    "ready_stance": "Frame from ready_stance at t = 0.",
+    "spike_contact": "Frame from spike at the contact event.",
+    "keyart": "The character's identity pose, matched to the 2D key art (pose_keyart__{character})."
+  },
+  "personality_params": {
+    "note": "The GLOBAL MOVEMENT LANGUAGE is the clip library. The CHARACTER PERSONALITY is these parameters (runtime) plus the character's overridden clips (authored). Defaults are 1.0 = the roster average.",
+    "tempo":              {"default": 1.0, "min": 0.85, "max": 1.15, "runtime": "global playback multiplier for locomotion and stance clips"},
+    "anticipation_hold":  {"default": 1.0, "min": 0.8,  "max": 1.35, "runtime": "stretches windup..commit in skill clips"},
+    "release_snap":       {"default": 1.0, "min": 0.85, "max": 1.3,  "runtime": "compresses commit..contact in skill clips"},
+    "overshoot":          {"default": 1.0, "min": 0.4,  "max": 1.4,  "runtime": "spring overshoot on secondary chains and procedural settles"},
+    "idle_energy":        {"default": 1.0, "min": 0.3,  "max": 1.5,  "runtime": "idle variant weights and breathing depth"},
+    "head_tracking":      {"default": 1.0, "min": 0.5,  "max": 1.3,  "runtime": "LookAt influence toward the ball"},
+    "expressiveness":     {"default": 1.0, "min": 0.5,  "max": 1.4,  "runtime": "multiplier on expression preset weights"},
+    "celebration_energy": {"default": 1.0, "min": 0.3,  "max": 1.5,  "runtime": "selects celebration variants"},
+    "blink_rate":         {"default": 1.0, "min": 0.5,  "max": 1.6,  "runtime": "blinks per minute multiplier (base 17/min)"}
+  }
+}

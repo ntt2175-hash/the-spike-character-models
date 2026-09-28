@@ -1,0 +1,81 @@
+{
+  "spec": "spike.lighting",
+  "version": "1.0.0",
+  "description": "Character lighting contexts. Directions are CAMERA-RELATIVE so a profile keeps its look from any camera angle: azimuth 0 = light comes from behind the camera, +90 = from screen right, 180 = from behind the subject (backlight). Elevation 0 = horizontal, +90 = straight down. The character light rig uses render layer 2 only; environment lighting is scaled, never replaced.",
+  "rig": {
+    "key": "DirectionalLight3D, shadows on, cull mask = character layer. The only light that drives the toon ramp's lit/shadow boundary.",
+    "kicker": "Optional SpotLight3D with a tight cone on the head for close-ups: high-resolution hair-on-face shadows that a directional shadow map cannot resolve at 85 mm.",
+    "fill": "Environment ambient light (color + energy). It lifts the shadow side and must never flatten it: fill_energy <= 0.45 * key_energy.",
+    "rim": "Shader rim (fresnel, masked toward rim azimuth) set as instance uniforms on character materials. Cheaper and more controllable than a physical back light."
+  },
+  "profiles": {
+    "lookdev_neutral": {
+      "purpose": "QC turnarounds. Honest, even, slightly flat. Hides nothing.",
+      "key":  {"azimuth_deg": -35, "elevation_deg": 40, "color": "#fff8f0", "energy": 1.0, "shadows": true, "shadow_softness": 0.3},
+      "fill": {"color": "#c9d4e6", "energy": 0.42},
+      "rim":  {"azimuth_deg": 160, "color": "#ffffff", "strength": 0.25, "width": 0.35},
+      "environment": {"background": "#8c8f96", "env_light_scale": 1.0, "exposure": 1.0, "glow": 0.0, "saturation": 1.0},
+      "face_shadow_soft": 0.04,
+      "outline_scale": 1.0
+    },
+    "gameplay_readable": {
+      "purpose": "Matches. Clear value separation between character, court and ball. Shadows present but never hide the pose.",
+      "key":  {"azimuth_deg": -25, "elevation_deg": 55, "color": "#fff4e6", "energy": 1.05, "shadows": true, "shadow_softness": 0.35},
+      "fill": {"color": "#b8c6de", "energy": 0.45},
+      "rim":  {"azimuth_deg": 150, "color": "#fff1dc", "strength": 0.45, "width": 0.3},
+      "environment": {"background": "#1a1714", "env_light_scale": 1.0, "exposure": 1.0, "glow": 0.15, "saturation": 1.0},
+      "face_shadow_soft": 0.06,
+      "outline_scale": 1.0
+    },
+    "lobby_warm": {
+      "purpose": "Home screen / character menu. Warm gym window light, soft and flattering.",
+      "key":  {"azimuth_deg": 40, "elevation_deg": 30, "color": "#ffe2c2", "energy": 0.95, "shadows": true, "shadow_softness": 0.5},
+      "fill": {"color": "#d9c6c0", "energy": 0.4},
+      "rim":  {"azimuth_deg": -150, "color": "#ffd7a8", "strength": 0.6, "width": 0.4},
+      "environment": {"background": "#6b4a36", "env_light_scale": 1.0, "exposure": 1.0, "glow": 0.2, "saturation": 1.02},
+      "face_shadow_soft": 0.08,
+      "outline_scale": 1.0
+    },
+    "cinematic_soft": {
+      "purpose": "Close-up faces and hair. Soft key high on the face, crisp hair shadow, gentle rim for separation.",
+      "key":  {"azimuth_deg": -40, "elevation_deg": 35, "color": "#fff6ee", "energy": 1.0, "shadows": true, "shadow_softness": 0.2, "kicker": true},
+      "fill": {"color": "#c3cbe0", "energy": 0.38},
+      "rim":  {"azimuth_deg": 145, "color": "#ffffff", "strength": 0.55, "width": 0.3},
+      "environment": {"background": "#2a2622", "env_light_scale": 0.8, "exposure": 1.0, "glow": 0.25, "saturation": 1.03},
+      "face_shadow_soft": 0.035,
+      "outline_scale": 0.9
+    },
+    "cinematic_dramatic": {
+      "purpose": "Tension beats and action shots. Strong side key, deep but tinted shadows, strong rim, dimmed arena.",
+      "key":  {"azimuth_deg": -70, "elevation_deg": 28, "color": "#ffeedd", "energy": 1.15, "shadows": true, "shadow_softness": 0.15, "kicker": true},
+      "fill": {"color": "#8e9bbd", "energy": 0.28},
+      "rim":  {"azimuth_deg": 135, "color": "#fff3e0", "strength": 0.85, "width": 0.28},
+      "environment": {"background": "#0d0c0b", "env_light_scale": 0.45, "exposure": 1.0, "glow": 0.35, "saturation": 1.05},
+      "face_shadow_soft": 0.03,
+      "outline_scale": 1.0
+    },
+    "sp_hero": {
+      "purpose": "S+ hero shots. The environment falls away, the character's accent color becomes the rim and the atmosphere. The face must stay fully readable.",
+      "key":  {"azimuth_deg": -30, "elevation_deg": 22, "color": "#ffffff", "energy": 1.1, "shadows": true, "shadow_softness": 0.2, "kicker": true},
+      "fill": {"color": "@accent_dark", "energy": 0.4},
+      "rim":  {"azimuth_deg": 160, "color": "@accent", "strength": 1.0, "width": 0.34},
+      "environment": {"background": "@backdrop", "env_light_scale": 0.15, "exposure": 1.05, "glow": 0.55, "saturation": 1.06},
+      "face_shadow_soft": 0.03,
+      "outline_scale": 1.1
+    },
+    "sp_blackout": {
+      "purpose": "The negative beat before a reveal: near-black, only the rim draws the silhouette.",
+      "key":  {"azimuth_deg": 0, "elevation_deg": 30, "color": "#ffffff", "energy": 0.05, "shadows": false, "shadow_softness": 0.2},
+      "fill": {"color": "#000000", "energy": 0.02},
+      "rim":  {"azimuth_deg": 170, "color": "@accent", "strength": 1.0, "width": 0.22},
+      "environment": {"background": "#000000", "env_light_scale": 0.0, "exposure": 1.0, "glow": 0.6, "saturation": 1.0},
+      "face_shadow_soft": 0.03,
+      "outline_scale": 0.0
+    }
+  },
+  "palette_tokens": {
+    "note": "Colors beginning with '@' are resolved from the character's palette (character.json: palette.accent, palette.accent_dark, palette.backdrop).",
+    "tokens": ["@accent", "@accent_dark", "@backdrop"]
+  },
+  "blend_defaults_s": {"into_cinematic": 0.2, "between_shots": 0.0, "back_to_gameplay": 0.4}
+}

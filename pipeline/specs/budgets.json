@@ -1,0 +1,81 @@
+{
+  "spec": "spike.budgets",
+  "version": "1.0.0",
+  "description": "Runtime budgets for the shipping platform: Windows x86_64 desktop, Godot 4.4+ Forward+. MASTER quality is not budgeted here; it is limited only by what the bake and the close-up need.",
+  "platform": "windows_x86_64_desktop",
+  "reference_hardware": {
+    "desktop_high": "GTX 1660 / RX 5600 class or better, 1080p to 1440p, 60 fps",
+    "desktop_low": "Recent integrated GPU (Iris Xe / Radeon 680M class), 1080p, 60 fps with reduced settings"
+  },
+  "lods": {
+    "LOD0": {
+      "use": "Cinematics, S+ sequences, close-ups, character select, lobby, victory. Forced on for any cinematic camera.",
+      "min_screen_height_px": 600,
+      "triangles": {"normal": 70000, "s": 90000, "splus": 120000},
+      "triangle_guide": {"face_head_eyes_mouth": 16000, "hair": 38000, "body_hands": 20000, "clothing": 26000, "shoes_pair": 9000, "accessories": 6000},
+      "max_surfaces": 12,
+      "max_deform_bones": 150,
+      "texture_px": {"face": 2048, "eye": 1024, "hair": 2048, "skin": 2048, "clothing": 2048, "shoes": 1024, "accessory": 1024, "sdf": 1024},
+      "secondary": "all chains",
+      "face": "all shapes, shader gaze, blush",
+      "outline": true,
+      "shadow_cast": true
+    },
+    "LOD1": {
+      "use": "Gameplay when the character is large on screen (replays, close serve camera, near-camera players).",
+      "min_screen_height_px": 250,
+      "triangles": {"normal": 36000, "s": 40000, "splus": 45000},
+      "max_surfaces": 8,
+      "max_deform_bones": 150,
+      "texture_px": {"face": 1024, "eye": 512, "hair": 1024, "skin": 1024, "clothing": 1024, "shoes": 512, "accessory": 512, "sdf": 512},
+      "secondary": "chains flagged keep_at_lod1",
+      "face": "all shapes, shader gaze",
+      "outline": true,
+      "shadow_cast": true
+    },
+    "LOD2": {
+      "use": "Standard gameplay distance (about 60 to 250 px tall at 1080p).",
+      "min_screen_height_px": 0,
+      "triangles": {"normal": 12000, "s": 12000, "splus": 14000},
+      "max_surfaces": 4,
+      "max_deform_bones": 80,
+      "texture_px": {"atlas_body": 512, "hair": 512, "face": 512},
+      "secondary": "chains flagged keep_at_lod2 (usually the ponytail or the longest mass only)",
+      "face": "eye_blink, mouth_A only",
+      "outline": true,
+      "shadow_cast": true
+    }
+  },
+  "lod_switch": {
+    "metric": "projected full-body height in pixels (head top to feet) at the current camera",
+    "hysteresis": 0.12,
+    "cinematic_force": "LOD0"
+  },
+  "frame_budget_ms": {
+    "desktop_high": {"all_characters_gpu": 3.5, "per_character_cpu": 0.12, "special_sequence_extra_gpu": 2.0, "max_characters_on_court": 12},
+    "desktop_low":  {"all_characters_gpu": 5.0, "per_character_cpu": 0.12, "special_sequence_extra_gpu": 1.5, "max_characters_on_court": 12}
+  },
+  "quality_levels": {
+    "desktop_high": {"outline": true, "secondary_hz": 60, "face_hz": 60, "kicker_shadows": true, "dof": true, "vfx_particle_scale": 1.0},
+    "desktop_low":  {"outline": true, "secondary_hz": 30, "face_hz": 30, "kicker_shadows": false, "dof": false, "vfx_particle_scale": 0.5}
+  },
+  "textures": {
+    "source_px": {"face": 4096, "hair": 4096, "skin": 4096, "clothing": 4096, "shoes": 2048, "eye": 2048},
+    "godot_import": {
+      "color": "VRAM Compressed, high_quality = true (BC7), mipmaps on",
+      "normal": "VRAM Compressed, normal_map = enable (BC5 / RGTC), mipmaps on",
+      "ilm_mask": "VRAM Compressed, high_quality = true, sRGB OFF (linear)",
+      "sdf": "Lossless (no block compression: BC artifacts break the shadow threshold), mipmaps on, filter linear"
+    }
+  },
+  "animation": {
+    "godot_import": "Optimizer on (max_velocity_error 0.01, max_angular_error 0.01, max_precision_error 3). Compression on for gameplay clips; off for sp_* clips so facial and finger detail survives close-ups.",
+    "sample_fps": 30
+  },
+  "vfx": {
+    "max_live_particles_gameplay": 400,
+    "max_live_particles_special": 2500,
+    "max_screen_coverage_over_face": 0.1,
+    "note": "Screen coverage is the fraction of the face's screen rectangle covered by opaque or additive VFX at any frame. The face stays readable."
+  }
+}

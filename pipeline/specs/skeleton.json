@@ -1,0 +1,77 @@
+{
+  "spec": "spike.skeleton",
+  "version": "1.0.0",
+  "description": "Standard humanoid skeleton for every The Spike character. Primary bone names are identical to Godot's SkeletonProfileHumanoid so shared animation can be retargeted with a BoneMap and no renaming. Coordinates are Blender space (Z up, character faces -Y, character's left is +X) for a reference character of height 1.0; the rig builder scales them by the character's proportions.",
+  "conventions": {
+    "armature_object_name": "{character}_rig",
+    "rest_pose": "A-pose, upper arms 40 degrees below horizontal, elbows bent 8 degrees forward, palms facing the thighs, feet straight, weight neutral",
+    "arm_angle_deg": 40,
+    "arm_angle_tolerance_deg": 6,
+    "forward_axis_blender": "-Y",
+    "up_axis_blender": "+Z",
+    "units": "meters, scale applied (object scale 1.0)",
+    "side_suffix_rule": "Primary bones use Left/Right prefixes (Godot humanoid profile). Secondary bones put the side LAST: _L / _R, so Blender's name flipping and X-mirror work.",
+    "secondary_bone_pattern": "^(hair|ribbon|cloth|acc)_[a-z]+(_[A-Z])?_[0-9]{2}(_[LR])?$",
+    "socket_bone_pattern": "^socket_[a-z_]+(_[LR])?$",
+    "max_influences_per_vertex": 4,
+    "weight_normalization": "all deform weights normalized to 1.0",
+    "twist_bone_policy": "Twist bones are deform bones driven by constraints in Blender. Their motion is BAKED into every exported clip (export with force sampling). Godot never drives twist bones itself."
+  },
+  "primary_bones": [
+    {"name": "Root",        "parent": null,          "head": [0.0, 0.0, 0.0],      "tail": [0.0, 0.10, 0.0],   "deform": false, "note": "Floor-projected root. Carries root motion and world placement."},
+    {"name": "Hips",        "parent": "Root",        "head": [0.0, 0.0, 0.545],    "tail": [0.0, 0.0, 0.595],  "deform": true},
+    {"name": "Spine",       "parent": "Hips",        "head": [0.0, 0.0, 0.595],    "tail": [0.0, 0.005, 0.662], "deform": true},
+    {"name": "Chest",       "parent": "Spine",       "head": [0.0, 0.005, 0.662],  "tail": [0.0, 0.004, 0.728], "deform": true},
+    {"name": "UpperChest",  "parent": "Chest",       "head": [0.0, 0.004, 0.728],  "tail": [0.0, 0.008, 0.812], "deform": true},
+    {"name": "Neck",        "parent": "UpperChest",  "head": [0.0, 0.008, 0.812],  "tail": [0.0, 0.006, 0.895], "deform": true},
+    {"name": "Head",        "parent": "Neck",        "head": [0.0, 0.006, 0.895],  "tail": [0.0, 0.006, 0.998], "deform": true, "note": "Pivot at the skull base (atlas), about 73% of a head height below the crown, level with the jaw angle. A pivot at chin level makes nods swing the face; keep it here."},
+    {"name": "Jaw",         "parent": "Head",        "head": [0.0, -0.006, 0.888], "tail": [0.0, -0.050, 0.864], "deform": true, "note": "Pivot at the jaw hinge in front of the ear, tail at the chin."},
+    {"name": "LeftEye",     "parent": "Head",        "head": [0.021, -0.040, 0.922], "tail": [0.021, -0.060, 0.922], "deform": false, "note": "Eye pivot at the center of the eyeball volume. Gaze is driven in the eye shader (iris offset); the bone is the gaze origin."},
+    {"name": "LeftShoulder","parent": "UpperChest",  "head": [0.014, -0.004, 0.790], "tail": [0.092, 0.006, 0.792], "deform": true},
+    {"name": "LeftUpperArm","parent": "LeftShoulder","head": [0.100, 0.006, 0.788], "tail": [0.230, 0.006, 0.679], "deform": true},
+    {"name": "LeftLowerArm","parent": "LeftUpperArm","head": [0.230, 0.006, 0.679], "tail": [0.345, -0.012, 0.583], "deform": true},
+    {"name": "LeftHand",    "parent": "LeftLowerArm","head": [0.345, -0.012, 0.583], "tail": [0.378, -0.014, 0.556], "deform": true},
+    {"name": "LeftUpperLeg","parent": "Hips",        "head": [0.052, 0.0, 0.525],  "tail": [0.050, -0.005, 0.285], "deform": true},
+    {"name": "LeftLowerLeg","parent": "LeftUpperLeg","head": [0.050, -0.005, 0.285], "tail": [0.048, 0.010, 0.045], "deform": true},
+    {"name": "LeftFoot",    "parent": "LeftLowerLeg","head": [0.048, 0.010, 0.045], "tail": [0.050, -0.075, 0.012], "deform": true},
+    {"name": "LeftToes",    "parent": "LeftFoot",    "head": [0.050, -0.075, 0.012], "tail": [0.050, -0.112, 0.012], "deform": true}
+  ],
+  "mirror_rule": "Every bone whose name starts with 'Left' is mirrored to 'Right' with head/tail X negated.",
+  "fingers": {
+    "note": "Expanded by the rig builder along the hand axis. base = distance from wrist along the hand axis; lane = offset across the palm (negative = toward the thumb / forward); lengths = proximal, intermediate, distal (or metacarpal, proximal, distal for the thumb).",
+    "thumb":  {"bones": ["ThumbMetacarpal", "ThumbProximal", "ThumbDistal"],      "base": 0.010, "lane": -0.014, "drop": -0.006, "lengths": [0.020, 0.017, 0.014], "splay_deg": 38},
+    "index":  {"bones": ["IndexProximal", "IndexIntermediate", "IndexDistal"],     "base": 0.050, "lane": -0.011, "drop": 0.0,    "lengths": [0.023, 0.014, 0.011], "splay_deg": 5},
+    "middle": {"bones": ["MiddleProximal", "MiddleIntermediate", "MiddleDistal"],  "base": 0.052, "lane": -0.003, "drop": 0.0,    "lengths": [0.025, 0.016, 0.012], "splay_deg": 0},
+    "ring":   {"bones": ["RingProximal", "RingIntermediate", "RingDistal"],        "base": 0.050, "lane": 0.005,  "drop": 0.0,    "lengths": [0.023, 0.015, 0.011], "splay_deg": -4},
+    "little": {"bones": ["LittleProximal", "LittleIntermediate", "LittleDistal"],  "base": 0.045, "lane": 0.012,  "drop": 0.0,    "lengths": [0.018, 0.012, 0.010], "splay_deg": -9}
+  },
+  "twist_bones": [
+    {"name": "LeftUpperArmTwist", "parent": "LeftUpperArm", "at": 0.5,  "driver_bone": "LeftUpperArm", "influence": -0.5, "note": "Counter-rotates half of the upper arm's twist so the shoulder does not candy-wrap.", "deform": true},
+    {"name": "LeftLowerArmTwist", "parent": "LeftLowerArm", "at": 0.72, "driver_bone": "LeftHand",     "influence": 0.6,  "note": "Carries 60% of the hand's twist into the forearm near the wrist.", "deform": true},
+    {"name": "LeftUpperLegTwist", "parent": "LeftUpperLeg", "at": 0.35, "driver_bone": "LeftUpperLeg", "influence": -0.4, "note": "Counter-rotates 40% of the thigh twist near the hip.", "deform": true}
+  ],
+  "sockets": [
+    {"name": "socket_ball_L",   "parent": "LeftHand",  "offset_along": 0.75, "offset_forward": -0.012, "use": "Ball contact point for the left palm (receive, set, block). VFX spawn anchor."},
+    {"name": "socket_head_top", "parent": "Head",      "offset_along": 1.0,  "offset_forward": 0.0,    "use": "Above-crown anchor for aura / rarity VFX."},
+    {"name": "socket_chest",    "parent": "UpperChest","offset_along": 0.4,  "offset_forward": -0.07,  "use": "Chest-front anchor for S+ energy accents."},
+    {"name": "socket_foot_L",   "parent": "LeftFoot",  "offset_along": 0.5,  "offset_forward": 0.0,    "use": "Takeoff/landing dust and court interaction."}
+  ],
+  "secondary_chain_standard": {
+    "note": "Chains every character may use. Characters declare their actual chains in character.json. Chain roots parent to the listed bone.",
+    "families": {
+      "hair":   {"parent_default": "Head",  "max_bones_per_chain": 8, "lod2_policy": "only chains flagged keep_at_lod2 simulate"},
+      "ribbon": {"parent_default": "Head",  "max_bones_per_chain": 6, "lod2_policy": "disabled"},
+      "cloth":  {"parent_default": "Spine", "max_bones_per_chain": 3, "lod2_policy": "disabled"},
+      "acc":    {"parent_default": "Head",  "max_bones_per_chain": 4, "lod2_policy": "disabled"}
+    },
+    "standard_cloth_chains": [
+      {"id": "cloth_jersey_F", "parent": "Spine", "bones": 2, "role": "Jersey front hem lift on jump and landing"},
+      {"id": "cloth_jersey_B", "parent": "Spine", "bones": 2, "role": "Jersey back hem"},
+      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "mirrored": true, "role": "Jersey side hems (cloth_jersey_S_01_L / _R)"}
+    ]
+  },
+  "deformation_budget": {
+    "max_deform_bones_lod0": 150,
+    "max_deform_bones_lod2": 80
+  }
+}

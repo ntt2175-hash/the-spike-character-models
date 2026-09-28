@@ -1,0 +1,380 @@
+{
+  "spec": "spike.character",
+  "version": "1.0.0",
+  "id": "sara",
+  "display_name": "Sara",
+  "tier": "splus",
+  "status": "benchmark_in_progress",
+  "identity": {
+    "jersey_number": 2,
+    "handedness": "right",
+    "role": "outside_hitter",
+    "role_confidence": "assumed: the key art is a spike load and the featured event is titled 追風扣殺手 (roughly 'wind-chasing spike ace'). Confirm with the design owner.",
+    "one_line": "The calm ace: stillness while she aims, one decisive release.",
+    "pillars": [
+      "The aim-and-load reach: left hand fully extended with fingers spread wide, right hand cocked behind the head.",
+      "High ponytail tied with a thin sky-blue ribbon whose loop stands upright above the head and whose tail streams.",
+      "Cool, heavy-lidded teal eyes, level brows angled toward the nose, lips parted in a controlled exhale. She does not smile while playing.",
+      "Asymmetric legwear: a black knee-high sock on the LEFT leg only, a low light ankle sock on the right. Knee pads on both knees.",
+      "#2 uniform: teal-to-pale gradient front with a wind-swirl print, white side panels, royal-blue piping, navy gradient shorts."
+    ],
+    "silhouette_signatures": [
+      "Ribbon loop standing above the crown, off-center toward her left",
+      "Ponytail mass that sweeps opposite the reach (long, thick at the root, three tapering sub-masses)",
+      "Split bang points reaching the eyes; long cheek lock curling under the jaw on her left",
+      "Spread-finger reaching hand (each finger separable in silhouette)",
+      "Loose jersey hem flaring over short fitted shorts",
+      "Knee-pad bulges on both knees"
+    ],
+    "asymmetry": [
+      {"feature": "legwear",  "left": "black knee-high sock, top hidden under the knee pad", "right": "bare shin, light ankle sock", "confidence": "high (key art and approach shot agree)"},
+      {"feature": "ponytail", "left": "tie point and ribbon", "right": "-", "confidence": "medium: needs a turnaround or back view"},
+      {"feature": "side locks", "left": "shorter lock curling under the jaw", "right": "longer, straighter lock", "confidence": "medium"},
+      {"feature": "shorts number", "left": "-", "right": "small '2' on the right-leg side panel", "confidence": "medium"}
+    ],
+    "unknowns": [
+      "Back of the jersey (number and name placement)",
+      "Chest wordmark text (unreadable in every provided source)",
+      "Hairstyle from behind: ponytail root shape and the under-layer at the nape",
+      "Shoe design on the medial side and the outsole pattern",
+      "Canonical height",
+      "Neckline trim color"
+    ],
+    "sources": [
+      {"file": "characters/sara/reference/sara_keyart.jpg", "role": "primary identity source"},
+      {"file": "docs/reference/video_shot_breakdown.jpg", "role": "in-game cut-in (5.7-6.9 s) and lobby (13.5 s+) confirm the key art; the approach shot (2.8-5.5 s) confirms the leg asymmetry"}
+    ]
+  },
+  "proportions": {
+    "note": "Blocking targets for the rig builder and the body blockout. The key art is a foreshortened low-angle leap, so these are ESTIMATES until checked against a turnaround. Confidence is listed per value.",
+    "height_m": 1.66,
+    "head_units": 7.9,
+    "leg_ratio": 0.53,
+    "neck_length": 1.159,
+    "shoulder_width": 0.97,
+    "hip_width": 1.02,
+    "arm_length": 1.03,
+    "hand_scale": 1.1,
+    "foot_scale": 0.97,
+    "confidence": {
+      "height_m": "low (no canon source)",
+      "head_units": "medium: 7.9 heads including hair volume (art-direction pass: 8.9 read as a small, generic head). The design owner asked for a vertically compressed face (eye-to-chin ~1.3x the eye spacing, as in the in-game close-up); the small head also suits her long-legged key art.",
+      "leg_ratio": "medium (long legs are a visible trait)",
+      "neck_length": "medium",
+      "shoulder_width": "medium (athletic but narrow compared to the thigh mass)",
+      "hip_width": "medium",
+      "arm_length": "medium (the reach reads long)"
+    },
+    "body_notes": [
+      "Athletic jumper: full, strong thighs with a clear vastus teardrop above the knee pad; toned calves with a high calf peak.",
+      "Narrow waist, moderate rib cage, flat stomach under a loose jersey.",
+      "Shoulders slightly narrower than the hips' outer silhouette in the front view.",
+      "Long slim forearms, long fingers. The hand is a hero element of her pose."
+    ]
+  },
+  "palette": {
+    "note": "Sampled from the key art (297x673 JPEG) and the 1918x820 cut-in video frame, then corrected for compression and lighting. Iris colors follow the in-game close-up (reference video 0.0-2.8 s), which the design owner chose as the eye quality target. Re-sample from the original source art when it is available.",
+    "accent": "#5fd0f2",
+    "accent_dark": "#173247",
+    "backdrop": "#122a38",
+    "skin_light": "#fbe3e5",
+    "skin_base": "#f6cbd2",
+    "skin_shadow": "#d49aab",
+    "skin_blush": "#f2a2b2",
+    "hair_base": "#4d4756",
+    "hair_shadow": "#2a2530",
+    "hair_highlight": "#a8a094",
+    "hair_rim": "#efe4da",
+    "iris_top": "#1d4aa6",
+    "iris_mid": "#43c3e4",
+    "iris_bottom": "#bdf7f7",
+    "iris_ring": "#2552bd",
+    "iris_cog": "#1c3a92",
+    "pupil": "#141b2b",
+    "sclera": "#f5f4fa",
+    "ribbon": "#6fa3e0",
+    "hair_tie": "#334158",
+    "jersey_front_top": "#223856",
+    "jersey_front_bottom": "#90bacf",
+    "jersey_side": "#eef0f5",
+    "jersey_piping": "#2f5fc8",
+    "jersey_print": "#e8f4fa",
+    "shorts_base": "#172f54",
+    "shorts_gradient": "#3d6b96",
+    "shorts_side": "#a7c7d9",
+    "kneepad_pad": "#e4e6ec",
+    "kneepad_band": "#8fb3cb",
+    "sock_black": "#1c1d27",
+    "sock_sheen": "#3a3f5e",
+    "ankle_sock": "#dde0e8",
+    "shoe_upper": "#b9bdca",
+    "shoe_accent": "#1a1a1d",
+    "shoe_sole": "#f1f2f5"
+  },
+  "face": {
+    "eye_shader": {
+      "iris_top": "@iris_top",
+      "iris_mid": "@iris_mid",
+      "iris_bottom": "@iris_bottom",
+      "pupil_color": "@pupil",
+      "sclera_color": "@sclera",
+      "pupil_scale": 0.82,
+      "iris_scale": 1.0,
+      "iris_depth": 0.035,
+      "lid_shadow": 0.5,
+      "catchlights": [
+        {"pos": [0.64, 0.30], "size": 0.13, "intensity": 1.0},
+        {"pos": [0.38, 0.72], "size": 0.05, "intensity": 0.55}
+      ]
+    },
+    "blush": 0.35,
+    "default_expression": "sara_focus",
+    "blink_style": "slow",
+    "design_notes": [
+      "Acorn-shaped face: round, wide skull and cheeks tapering quickly to a small pointed chin. Eye line to chin is ~1.1x the distance between the eye centers (in-game close-up); mouth small and close to the chin.",
+      "Eye line at ~47% of head height from the chin. Eyes are large; the default upper lid rests slightly on the iris and lowers further in her focus expressions (lid_heavy).",
+      "Upper lash line thick with a slight outer wing; lower lash line thin and broken.",
+      "Brows thin and straight, angled down toward the nose when focused.",
+      "Nose: minimal bridge, small tip with a pink blush highlight (visible in the key art).",
+      "Mouth: small. Default is a parted exhale, not a closed line."
+    ]
+  },
+  "expressions": {
+    "sara_focus":      {"eye_lid_heavy": 0.45, "eye_narrow": 0.2, "brow_down": 0.3, "mouth_exhale": 0.35},
+    "sara_resolve":    {"eye_narrow": 0.5, "brow_down": 0.55, "mouth_exhale": 0.2},
+    "sara_release":    {"eye_narrow": 0.7, "brow_angry": 0.35, "mouth_shout": 0.55, "cheek_raise": 0.3},
+    "sara_soft_smile": {"eye_lid_heavy": 0.2, "mouth_smile": 0.35, "eye_smile": 0.1},
+    "sara_setback":    {"eye_lid_heavy": 0.55, "brow_inner_up": 0.3, "mouth_frown": 0.2}
+  },
+  "hair": {
+    "construction": {
+      "primary": ["cranium under-layer", "bangs (3 locks, split points)", "side locks (left curls under jaw, right longer)", "high ponytail", "nape layer under the ponytail"],
+      "secondary": ["sub-locks inside each mass", "3 ponytail sub-masses that fan when moving", "ahoge (2 fine strands at the crown)"],
+      "tertiary": ["6-10 flyaway strands at the temples and ponytail (LOD0 only) that cross the face in close-ups"],
+      "ribbon": "Thin satin ribbon (~12 mm wide) over a navy elastic tie. One standing loop (~11 cm) and one long tail (~27 cm)."
+    },
+    "highlight": "Broken angel ring following the crown curve, warm grey, never a continuous band. Ends lighten toward a cool cream rim.",
+    "tip_gradient": {"from": "@hair_base", "to": "#6f6a78", "start": 0.7}
+  },
+  "secondary_chains": {
+    "note": "Chains the rig builder creates and the Godot SpringBoneSimulator3D simulates. root/direction are normalized to height in Blender space (Z up, character faces -Y, +X = her left). length is a fraction of height. Spring values are SpringBoneSimulator3D settings.",
+    "chains": [
+      {"id": "hair_ponytail_A", "parent": "Head", "bones": 7, "root": [0.03, 0.05, 0.977], "direction": [0.05, 0.35, -0.94], "length": 0.3, "curve_deg": 6, "stiffness": 0.9, "drag": 0.35, "gravity": 0.6, "radius": 0.022, "wind_response": 1.0, "keep_at_lod1": true, "keep_at_lod2": true},
+      {"id": "hair_ponytail_B", "parent": "Head", "bones": 6, "root": [0.04, 0.052, 0.9736], "direction": [0.12, 0.33, -0.94], "length": 0.26, "curve_deg": 8, "stiffness": 1.0, "drag": 0.35, "gravity": 0.6, "radius": 0.018, "wind_response": 1.1, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_ponytail_C", "parent": "Head", "bones": 5, "root": [0.022, 0.054, 0.9736], "direction": [-0.06, 0.37, -0.93], "length": 0.22, "curve_deg": 8, "stiffness": 1.1, "drag": 0.35, "gravity": 0.6, "radius": 0.016, "wind_response": 1.1, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "hair_bang_A", "parent": "Head", "bones": 3, "root": [0.022, -0.046, 0.9727], "direction": [0.1, -0.16, -0.98], "length": 0.0552, "curve_deg": 10, "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_bang_B", "parent": "Head", "bones": 3, "root": [0.0, -0.049, 0.9753], "direction": [0.0, -0.18, -0.98], "length": 0.0626, "curve_deg": 10, "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_bang_C", "parent": "Head", "bones": 3, "root": [-0.024, -0.046, 0.9727], "direction": [-0.1, -0.16, -0.98], "length": 0.0589, "curve_deg": 10, "stiffness": 3.2, "drag": 0.6, "gravity": 0.1, "radius": 0.008, "wind_response": 0.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_side_A", "parent": "Head", "bones": 4, "side": "L", "root": [0.058, -0.03, 0.9515], "direction": [0.05, -0.15, -0.99], "length": 0.092, "curve_deg": -14, "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_side_A", "parent": "Head", "bones": 5, "side": "R", "root": [-0.058, -0.03, 0.9515], "direction": [-0.05, -0.1, -0.99], "length": 0.1196, "curve_deg": 4, "stiffness": 1.6, "drag": 0.45, "gravity": 0.4, "radius": 0.01, "wind_response": 0.6, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "hair_ahoge_A", "parent": "Head", "bones": 2, "root": [0.005, -0.01, 0.9923], "direction": [0.0, -0.4, 0.92], "length": 0.025, "curve_deg": 25, "stiffness": 3.5, "drag": 0.5, "gravity": 0.0, "radius": 0.004, "wind_response": 0.4, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "hair_flyaway_A", "parent": "Head", "bones": 3, "root": [0.0445, -0.021, 0.9625], "direction": [0.45, -0.1, -0.88], "length": 0.045, "curve_deg": 12, "stiffness": 0.4, "drag": 0.2, "gravity": 0.2, "radius": 0.004, "wind_response": 1.4, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "hair_flyaway_B", "parent": "Head", "bones": 3, "root": [-0.0434, -0.018, 0.9642], "direction": [-0.5, -0.05, -0.86], "length": 0.045, "curve_deg": 12, "stiffness": 0.4, "drag": 0.2, "gravity": 0.2, "radius": 0.004, "wind_response": 1.4, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "hair_flyaway_C", "parent": "Head", "bones": 3, "root": [0.042, 0.068, 0.9668], "direction": [0.35, 0.3, -0.89], "length": 0.06, "curve_deg": 12, "stiffness": 0.4, "drag": 0.2, "gravity": 0.2, "radius": 0.004, "wind_response": 1.4, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "ribbon_loop_A", "parent": "Head", "bones": 3, "root": [0.036, 0.042, 0.9872], "direction": [0.15, 0.05, 0.98], "length": 0.066, "curve_deg": 18, "stiffness": 3.8, "drag": 0.7, "gravity": 0.0, "radius": 0.006, "wind_response": 0.2, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "ribbon_tail_A", "parent": "Head", "bones": 5, "root": [0.036, 0.046, 0.9838], "direction": [-0.22, 0.48, -0.85], "length": 0.16, "curve_deg": 10, "stiffness": 0.5, "drag": 0.25, "gravity": 0.4, "radius": 0.005, "wind_response": 1.3, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "cloth_jersey_F", "parent": "Spine", "bones": 2, "root": [0.0, -0.06, 0.585], "direction": [0.0, -0.15, -0.99], "length": 0.06, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "cloth_jersey_B", "parent": "Spine", "bones": 2, "root": [0.0, 0.058, 0.585], "direction": [0.0, 0.15, -0.99], "length": 0.06, "curve_deg": 0, "stiffness": 2.0, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": true, "keep_at_lod2": false},
+      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "L", "root": [0.09, 0.0, 0.585], "direction": [0.15, 0.0, -0.99], "length": 0.058, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false},
+      {"id": "cloth_jersey_S", "parent": "Spine", "bones": 2, "side": "R", "root": [-0.09, 0.0, 0.585], "direction": [-0.15, 0.0, -0.99], "length": 0.058, "curve_deg": 0, "stiffness": 2.2, "drag": 0.5, "gravity": 0.5, "radius": 0.02, "wind_response": 0.5, "keep_at_lod1": false, "keep_at_lod2": false}
+    ],
+    "colliders": [
+      {"bone": "Head",          "shape": "sphere",  "along": 0.42, "radius_rel": 0.056, "affects": ["hair", "ribbon"]},
+      {"bone": "Neck",          "shape": "capsule", "along": 0.5,  "radius_rel": 0.026, "height_rel": 0.06, "affects": ["hair", "ribbon"]},
+      {"bone": "UpperChest",    "shape": "capsule", "along": 0.55, "radius_rel": 0.062, "height_rel": 0.14, "affects": ["hair", "ribbon"]},
+      {"bone": "LeftShoulder",  "shape": "sphere",  "along": 0.9,  "radius_rel": 0.028, "affects": ["hair"]},
+      {"bone": "RightShoulder", "shape": "sphere",  "along": 0.9,  "radius_rel": 0.028, "affects": ["hair"]},
+      {"bone": "Hips",          "shape": "capsule", "along": 0.3,  "radius_rel": 0.07,  "height_rel": 0.12, "affects": ["cloth"]},
+      {"bone": "LeftUpperLeg",  "shape": "capsule", "along": 0.2,  "radius_rel": 0.042, "height_rel": 0.1,  "affects": ["cloth"]},
+      {"bone": "RightUpperLeg", "shape": "capsule", "along": 0.2,  "radius_rel": 0.042, "height_rel": 0.1,  "affects": ["cloth"]}
+    ]
+  },
+  "clothing": [
+    {"garment": "jersey",  "slots": ["jersey", "print"], "notes": "Sleeveless cap-shoulder cut, deep armholes. Front panel teal gradient (dark at chest to pale at hem) with the wind-swirl print and a large '2'. White side panels from armpit to hem with royal-blue piping on the seam. Straight hem, untucked, 5-8 cm over the shorts. Real thickness (2-3 mm) at the neckline, armholes and hem. Sports mesh: matte, fine weave only in close-up."},
+    {"garment": "shorts",  "slots": ["shorts", "print"], "notes": "Fitted volleyball shorts, navy with a lighter lower-side gradient. Pale-blue curved side panel with royal-blue piping; small '2' on the right-leg panel. Short inseam. Leg openings compress the thigh slightly (sculpted skin bulge)."},
+    {"garment": "kneepads","slots": ["kneepad", "kneesleeve"], "notes": "Sleeve pads on both knees. Light grey padded face 12-15 mm thick, sky-blue elastic bands top and bottom. Front stays rigid, back sleeve compresses (corr_kneepad_*)."},
+    {"garment": "legwear", "slots": ["sock"], "notes": "LEFT: black compression knee-high ending under the knee pad, satin-matte knit with a cool sheen. RIGHT: light ankle sock showing above the shoe."},
+    {"garment": "shoes",   "slots": ["shoe_upper", "shoe_sole", "shoe_trim"], "notes": "Low-mid volleyball shoes. Light grey mesh upper, black side panel stripe, black heel counter and outsole edge, black criss-cross laces, white midsole, light grey tongue. Designed as an object with separate upper / midsole / outsole / tongue / laces / heel counter."},
+    {"garment": "ribbon",  "slots": ["ribbon"], "notes": "Sky-blue satin ribbon over a navy elastic tie. Loop stands, tail streams."}
+  ],
+  "personality": {
+    "summary": "Stillness, then decision. Sara wastes no motion. Her anticipation is longer and quieter than the roster average; her release is sharper. She tracks the ball with her eyes before her head moves.",
+    "params": {
+      "tempo": 1.0,
+      "anticipation_hold": 1.2,
+      "release_snap": 1.15,
+      "overshoot": 0.75,
+      "idle_energy": 0.6,
+      "head_tracking": 1.2,
+      "expressiveness": 0.8,
+      "celebration_energy": 0.55,
+      "blink_rate": 0.8
+    },
+    "movement_notes": {
+      "idle": "Weight on one leg, still. Occasional adjustment of the ribbon tail with the right hand; a slow blink.",
+      "ready_stance": "Low and quiet, small bounces, the eyes do the searching.",
+      "approach": "Long gliding strides. Both arms swing far back on the penultimate step.",
+      "spike": "Signature reach: the left arm extends fully with spread fingers and HOLDS; the right arm draws back behind the head; then a whip with minimal follow-through flourish.",
+      "land": "Controlled, quiet. The ponytail keeps travelling after she has stopped.",
+      "celebration": "Restrained: an exhale with the eyes closed, a small smile, a head turn that swings the ponytail.",
+      "victory": "Recreates the reach toward the camera, then lowers the hand and looks past it.",
+      "defeat": "Eyes down, right hand touches the ribbon."
+    }
+  },
+  "animation": {
+    "overrides": {
+      "idle": "idle__sara",
+      "spike": "spike__sara",
+      "celebration": "celebration__sara",
+      "victory": "victory__sara",
+      "lobby_idle": "lobby_idle__sara",
+      "select_intro": "select_intro__sara"
+    },
+    "event_overrides": {
+      "spike__sara": {"windup": 0.0, "commit": 0.47, "contact": 0.58, "recover": 0.9}
+    },
+    "poses": {"keyart": "pose_keyart__sara"}
+  },
+  "camera": {
+    "shots": {
+      "keyart_match": {
+        "label": "Key-art match",
+        "purpose": "Reproduces the 2D key-art camera for silhouette comparison (pipeline/tools/silhouette_compare.py) and the S+ hero pose.",
+        "anchor": "Chest", "anchor_offset": [0.0, -0.05, 0.0],
+        "yaw_deg": 34, "pitch_deg": -14, "roll_deg": -9,
+        "focal_length_mm": 35, "frame_height_rel": 1.15, "screen_offset": [0.02, 0.0],
+        "dof": {"enabled": false}, "move": {"type": "static"}
+      }
+    },
+    "shot_overrides": {
+      "low_hero": {"yaw_deg": 32, "roll_deg": -8},
+      "ecu_eyes": {"yaw_deg": -10, "pitch_deg": 6, "roll_deg": 3}
+    }
+  },
+  "lighting": {
+    "rim_azimuth_bias_deg": -15,
+    "note": "Rim biased toward her right-back so it traces the ponytail and the ribbon tail."
+  },
+  "vfx": {
+    "motif": "Wind. Derived from her own design (the swirl print on her jersey, the streaming ponytail and ribbon), not from the reference video. Streaks spiral; they do not rise in straight lines.",
+    "palette": ["@accent", "#e8fbff", "@accent_dark"],
+    "cues": {
+      "sara_wind_gather": {"scene": "res://characters/sara/vfx/sara_wind_gather.tscn", "desc": "Fine air motes drift inward and upward. Background layer only.", "face_safe": true},
+      "sara_dust_takeoff":{"scene": "res://addons/spike_character/vfx/dust_burst.tscn", "desc": "Court dust at takeoff, tinted by the court, not the accent.", "face_safe": true},
+      "sara_wind_spiral": {"scene": "res://characters/sara/vfx/sara_wind_spiral.tscn", "desc": "Two helical streaks rising around her at a radius wider than the shoulders. A gap is kept open in front of the face.", "face_safe": true},
+      "sara_impact_shear":{"scene": "res://characters/sara/vfx/sara_impact_shear.tscn", "desc": "Crescent air-shear along the arm-swing arc, centered on the ball, offset from the face. Two frames at full intensity.", "face_safe": true},
+      "sara_ball_trail":  {"scene": "res://characters/sara/vfx/sara_ball_trail.tscn", "desc": "Twisting wind ribbon behind the ball in the accent color.", "face_safe": true},
+      "sara_court_swirl": {"scene": "res://characters/sara/vfx/sara_court_swirl.tscn", "desc": "Landing ring drawn as the jersey's swirl motif.", "face_safe": true}
+    }
+  },
+  "sound": {
+    "cues": ["sara_sp_inhale", "sara_sp_wind_rise", "sara_sp_voice", "sara_sp_hit", "ui_sp_sting", "duck_all"]
+  },
+  "special": {
+    "id": "sara_sp_wind_chaser",
+    "title": "Wind Chaser",
+    "trigger": "spike",
+    "concept": "Everything goes still, she aims, and the wind answers. The sequence is built on her rhythm: a long quiet hold, then a snap.",
+    "variants": {
+      "full":  ["breach", "focus", "glide", "held_breath", "reach", "release", "return"],
+      "short": ["breach", "reach", "release", "return"]
+    },
+    "shots": [
+      {
+        "id": "breach", "phase": "cinematic_transition", "duration_s": 0.12,
+        "camera": {"mode": "gameplay_push", "push_amount": 0.35, "ease": "expo_out"},
+        "lighting": {"profile": "gameplay_readable", "blend_s": 0.0},
+        "overlay": [{"t": 0.06, "ui": "sp_accent_wipe", "duration_s": 0.12}],
+        "sound": [{"t": 0.0, "cue": "ui_sp_sting"}],
+        "events": [{"t": 0.0, "name": "gameplay_freeze"}]
+      },
+      {
+        "id": "focus", "phase": "character_reveal", "duration_s": 0.9,
+        "camera": {"shot": "ecu_eyes", "blend_s": 0.0},
+        "body": {"clip": "sp_sara_focus", "blend_s": 0.0},
+        "lighting": {"profile": "cinematic_soft", "blend_s": 0.0},
+        "face": [
+          {"t": 0.0,  "expression": "sara_focus", "blend_s": 0.0},
+          {"t": 0.45, "expression": "sara_resolve", "blend_s": 0.18}
+        ],
+        "gaze": [
+          {"t": 0.0,  "target": "camera"},
+          {"t": 0.42, "target": "ball", "saccade": true}
+        ],
+        "shader": [
+          {"t": 0.0,  "param": "pupil_scale", "value": 1.0, "blend_s": 0.0},
+          {"t": 0.42, "param": "pupil_scale", "value": 0.8, "blend_s": 0.25}
+        ],
+        "hair": [{"t": 0.0, "wind": [0.4, 0.8, 0.2], "strength": 0.35, "blend_s": 0.3}],
+        "vfx": [{"t": 0.3, "cue": "sara_wind_gather", "anchor": "Head", "duration_s": 1.5}],
+        "sound": [{"t": 0.2, "cue": "sara_sp_inhale"}]
+      },
+      {
+        "id": "glide", "phase": "character_motion", "duration_s": 0.9,
+        "camera": {"shot": "approach_floor_track", "blend_s": 0.0},
+        "body": {"clip": "sp_sara_glide", "blend_s": 0.0},
+        "lighting": {"profile": "cinematic_dramatic", "blend_s": 0.0},
+        "face": [{"t": 0.0, "expression": "sara_resolve", "blend_s": 0.0}],
+        "gaze": [{"t": 0.0, "target": "ball"}],
+        "hair": [{"t": 0.0, "wind": [0.0, 0.3, 1.0], "strength": 0.2, "blend_s": 0.1}],
+        "vfx": [{"t": 0.83, "cue": "sara_dust_takeoff", "anchor": "socket_foot_L", "duration_s": 0.8}],
+        "sound": [{"t": 0.55, "cue": "sara_sp_wind_rise"}]
+      },
+      {
+        "id": "held_breath", "phase": "character_motion", "duration_s": 0.18,
+        "camera": {"shot": "low_hero", "blend_s": 0.0, "move_progress_start": 0.0, "hold": true},
+        "body": {"clip": "sp_sara_reach", "blend_s": 0.0},
+        "lighting": {"profile": "sp_blackout", "blend_s": 0.0},
+        "time_scale": [{"t": 0.0, "value": 0.3, "blend_s": 0.0}],
+        "sound": [{"t": 0.0, "cue": "duck_all"}]
+      },
+      {
+        "id": "reach", "phase": "hero_shot", "duration_s": 1.1,
+        "short": {"start_s": 0.3},
+        "camera": {"shot": "low_hero", "blend_s": 0.0},
+        "body": {"clip": "sp_sara_reach", "from_s": 0.05, "blend_s": 0.0},
+        "lighting": {"profile": "sp_hero", "blend_s": 0.12},
+        "face": [{"t": 0.1, "expression": "sara_resolve", "blend_s": 0.15}],
+        "gaze": [{"t": 0.0, "target": "ball"}],
+        "shader": [{"t": 0.1, "param": "eye_glow", "value": 0.4, "blend_s": 0.3}],
+        "hair": [{"t": 0.0, "wind": [0.0, 1.0, 0.25], "strength": 0.9, "blend_s": 0.15}],
+        "time_scale": [
+          {"t": 0.0,  "value": 1.0,  "blend_s": 0.08},
+          {"t": 0.35, "value": 0.25, "blend_s": 0.06},
+          {"t": 0.8,  "value": 1.0,  "blend_s": 0.05}
+        ],
+        "vfx": [{"t": 0.05, "cue": "sara_wind_spiral", "anchor": "Hips", "duration_s": 1.2}],
+        "sound": [{"t": 0.85, "cue": "sara_sp_voice"}]
+      },
+      {
+        "id": "release", "phase": "action_transition", "duration_s": 0.55,
+        "camera": {"shot": "impact_frame", "blend_s": 0.0, "until_s": 0.18, "then": "gameplay_follow", "then_blend_s": 0.12},
+        "body": {"clip": "sp_sara_reach", "from_event": "commit", "blend_s": 0.0},
+        "lighting": {"profile": "sp_hero", "blend_s": 0.0},
+        "face": [{"t": 0.0, "expression": "sara_release", "blend_s": 0.05}],
+        "vfx": [
+          {"t": 0.1, "cue": "sara_impact_shear", "anchor": "hit_hand", "duration_s": 0.3},
+          {"t": 0.1, "cue": "sara_ball_trail", "anchor": "ball", "duration_s": 1.5}
+        ],
+        "shake": [{"t": 0.1, "trauma": 0.6}],
+        "sound": [{"t": 0.1, "cue": "sara_sp_hit"}],
+        "events": [{"t": 0.1, "name": "action_resolved"}]
+      },
+      {
+        "id": "return", "phase": "return_to_gameplay", "duration_s": 0.45,
+        "camera": {"mode": "gameplay", "blend_s": 0.35},
+        "lighting": {"profile": "gameplay_readable", "blend_s": 0.4},
+        "shader": [{"t": 0.0, "param": "eye_glow", "value": 0.0, "blend_s": 0.3}],
+        "hair": [{"t": 0.0, "wind": [0.0, 0.0, 0.0], "strength": 0.0, "blend_s": 0.3}],
+        "events": [{"t": 0.0, "name": "gameplay_resume"}]
+      }
+    ],
+    "skip": {"jump_to": "release", "blend_s": 0.15},
+    "rules": {
+      "outcome": "Decided by gameplay at the trigger. The sequence only presents it.",
+      "max_full_s": 4.4,
+      "max_short_s": 2.0,
+      "short_after_plays_per_match": 1
+    }
+  }
+}

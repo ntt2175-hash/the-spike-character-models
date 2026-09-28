@@ -1,0 +1,179 @@
+{
+  "spec": "spike.shots",
+  "version": "1.0.0",
+  "description": "The camera vocabulary shared by Blender presentation renders and the Godot camera director. A shot is defined by COMPOSITION (what fills the frame, from where, with which lens), not by absolute camera coordinates, so the same shot works for a 1.52 m libero and a 1.85 m middle blocker.",
+  "character_space": "Right-handed, +Y up, +Z = the direction the character faces, +X = the character's left. Identical in Blender (after the glTF axis conversion) and Godot.",
+  "fields": {
+    "anchor": "Bone name, or an alias: 'eyes' (midpoint of LeftEye/RightEye), 'feet' (midpoint of the toes projected to the floor), 'hit_hand' / 'aim_hand' (socket_ball_R / socket_ball_L for a right-handed character, swapped for a left-hander).",
+    "anchor_offset": "Meters in character space, added to the anchor.",
+    "yaw_deg": "Camera azimuth around the anchor. 0 = in front of the character, +90 = on the character's left, 180 = behind.",
+    "pitch_deg": "Camera elevation. Positive = above, looking down. Negative = below, looking up.",
+    "roll_deg": "Dutch tilt. Positive rolls the horizon clockwise on screen.",
+    "focal_length_mm": "Full-frame equivalent (24 mm sensor height). Vertical FOV = 2*atan(12/f).",
+    "frame_height_m": "Vertical frame extent at the anchor distance, in meters. Mutually exclusive with frame_height_rel.",
+    "frame_height_rel": "Vertical frame extent as a multiple of the character's height.",
+    "screen_offset": "Where the anchor lands on screen, in half-frame units (-1..1). [0.33, 0.0] puts it on the right third line.",
+    "dof": "Depth of field. Distances are relative to the anchor distance.",
+    "move": "Camera move over duration_s. Types: static, push_in, pull_out, orbit, rise, track, drift. 'amount' is a fraction of distance (push/pull), degrees (orbit), meters (rise/track).",
+    "projection": "perspective (default) or orthographic (QC turnarounds only)."
+  },
+  "easing": ["linear", "sine_in_out", "quad_out", "cubic_out", "expo_out", "quad_in", "back_out"],
+  "presets": {
+    "ecu_eyes": {
+      "label": "Extreme close-up: eyes",
+      "purpose": "Emotional hook. The eyes are the whole image. Used to open an S+ sequence or to land a reaction.",
+      "anchor": "eyes", "anchor_offset": [0.0, 0.004, 0.0],
+      "yaw_deg": 12, "pitch_deg": 8, "roll_deg": 4,
+      "focal_length_mm": 85, "frame_height_m": 0.15, "screen_offset": [0.16, 0.10],
+      "dof": {"enabled": true, "far_start_m": 0.12, "far_transition_m": 0.9, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.16},
+      "move": {"type": "push_in", "amount": 0.06, "duration_s": 1.2, "ease": "sine_in_out", "noise": 0.0}
+    },
+    "cu_face": {
+      "label": "Close-up: face, 3/4",
+      "purpose": "Identity and expression read. The default face shot for dialogue, reactions and victory.",
+      "anchor": "Head", "anchor_offset": [0.0, 0.035, 0.02],
+      "yaw_deg": 28, "pitch_deg": 4, "roll_deg": 0,
+      "focal_length_mm": 85, "frame_height_m": 0.34, "screen_offset": [0.18, 0.12],
+      "dof": {"enabled": true, "far_start_m": 0.25, "far_transition_m": 1.6, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.12},
+      "move": {"type": "drift", "amount": 0.015, "duration_s": 3.0, "ease": "sine_in_out", "noise": 0.002}
+    },
+    "cu_face_low": {
+      "label": "Close-up: face, dramatic low 3/4",
+      "purpose": "Resolve, power, rivalry. Chin and jaw lead, eyes look down toward the lens.",
+      "anchor": "Head", "anchor_offset": [0.0, 0.03, 0.02],
+      "yaw_deg": 32, "pitch_deg": -18, "roll_deg": -5,
+      "focal_length_mm": 50, "frame_height_m": 0.42, "screen_offset": [0.2, 0.2],
+      "dof": {"enabled": true, "far_start_m": 0.35, "far_transition_m": 2.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.1},
+      "move": {"type": "push_in", "amount": 0.05, "duration_s": 1.0, "ease": "cubic_out", "noise": 0.0}
+    },
+    "ms_waist": {
+      "label": "Medium shot: waist up",
+      "purpose": "Gesture plus face. Celebrations, taunts, pre-serve focus.",
+      "anchor": "Chest", "anchor_offset": [0.0, 0.05, 0.0],
+      "yaw_deg": 22, "pitch_deg": 2, "roll_deg": 0,
+      "focal_length_mm": 50, "frame_height_m": 0.9, "screen_offset": [0.1, 0.1],
+      "dof": {"enabled": true, "far_start_m": 0.6, "far_transition_m": 3.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.08},
+      "move": {"type": "drift", "amount": 0.03, "duration_s": 2.5, "ease": "sine_in_out", "noise": 0.003}
+    },
+    "fs_full": {
+      "label": "Full body",
+      "purpose": "Silhouette, outfit and stance. Character select, loading screens, intros.",
+      "anchor": "Hips", "anchor_offset": [0.0, 0.02, 0.0],
+      "yaw_deg": 24, "pitch_deg": 3, "roll_deg": 0,
+      "focal_length_mm": 50, "frame_height_rel": 1.2, "screen_offset": [0.0, 0.02],
+      "dof": {"enabled": true, "far_start_m": 1.0, "far_transition_m": 5.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.06},
+      "move": {"type": "orbit", "amount": 6, "duration_s": 3.0, "ease": "sine_in_out", "noise": 0.0}
+    },
+    "low_hero": {
+      "label": "Dramatic low angle: hero",
+      "purpose": "Power and rarity. The S+ hero shot. Wide lens exaggerates the reach toward camera.",
+      "anchor": "Chest", "anchor_offset": [0.0, 0.0, 0.0],
+      "yaw_deg": 18, "pitch_deg": -26, "roll_deg": -6,
+      "focal_length_mm": 24, "frame_height_rel": 1.0, "screen_offset": [0.12, 0.05],
+      "dof": {"enabled": false, "far_start_m": 0.0, "far_transition_m": 0.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.0},
+      "move": {"type": "rise", "amount": 0.35, "duration_s": 1.1, "ease": "expo_out", "noise": 0.0}
+    },
+    "high_dramatic": {
+      "label": "Dramatic high angle",
+      "purpose": "Vulnerability, pressure, a defeat beat, or looking down on a dive receive.",
+      "anchor": "Chest", "anchor_offset": [0.0, 0.0, 0.0],
+      "yaw_deg": 30, "pitch_deg": 48, "roll_deg": 0,
+      "focal_length_mm": 35, "frame_height_rel": 1.1, "screen_offset": [0.0, -0.05],
+      "dof": {"enabled": true, "far_start_m": 0.8, "far_transition_m": 4.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.07},
+      "move": {"type": "pull_out", "amount": 0.1, "duration_s": 2.0, "ease": "sine_in_out", "noise": 0.0}
+    },
+    "action_track": {
+      "label": "Action: side tracking",
+      "purpose": "Approach runs, dives, lateral movement. The camera travels with the body, the background streams.",
+      "anchor": "Hips", "anchor_offset": [0.0, 0.1, 0.0],
+      "yaw_deg": 95, "pitch_deg": 4, "roll_deg": 0,
+      "focal_length_mm": 35, "frame_height_rel": 1.5, "screen_offset": [-0.2, 0.0],
+      "dof": {"enabled": true, "far_start_m": 1.5, "far_transition_m": 6.0, "near_end_m": 0.8, "near_transition_m": 0.6, "amount": 0.1},
+      "move": {"type": "track", "amount": 0.0, "duration_s": 1.0, "ease": "linear", "noise": 0.004}
+    },
+    "approach_floor_track": {
+      "label": "Action: floor-level tracking through a foreground layer",
+      "purpose": "Low, fast approach with a defocused foreground element (blocker, net post) framing the subject. Depth and tension.",
+      "anchor": "Hips", "anchor_offset": [0.0, -0.1, 0.0],
+      "yaw_deg": 110, "pitch_deg": -6, "roll_deg": 0,
+      "focal_length_mm": 35, "frame_height_rel": 1.05, "screen_offset": [0.1, 0.1],
+      "dof": {"enabled": true, "far_start_m": 1.2, "far_transition_m": 5.0, "near_end_m": 1.4, "near_transition_m": 0.8, "amount": 0.14},
+      "move": {"type": "track", "amount": 0.0, "duration_s": 1.0, "ease": "linear", "noise": 0.003}
+    },
+    "reveal_rise": {
+      "label": "Slow reveal: rise from the feet",
+      "purpose": "Character intros and gacha reveals. Shoes, legs, uniform, then the face lands on the beat.",
+      "anchor": "Hips", "anchor_offset": [0.0, -0.35, 0.0],
+      "yaw_deg": 14, "pitch_deg": -8, "roll_deg": 0,
+      "focal_length_mm": 50, "frame_height_rel": 0.55, "screen_offset": [0.0, 0.0],
+      "dof": {"enabled": true, "far_start_m": 0.8, "far_transition_m": 4.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.1},
+      "move": {"type": "rise", "amount": 0.95, "duration_s": 2.2, "ease": "sine_in_out", "noise": 0.0}
+    },
+    "impact_frame": {
+      "label": "Impact frame",
+      "purpose": "Ball contact. Near-still frame, tight on the hitting hand and the ball, face still in frame.",
+      "anchor": "hit_hand", "anchor_offset": [0.0, -0.1, 0.0],
+      "yaw_deg": 40, "pitch_deg": -10, "roll_deg": 9,
+      "focal_length_mm": 35, "frame_height_m": 1.1, "screen_offset": [0.1, 0.25],
+      "dof": {"enabled": false, "far_start_m": 0.0, "far_transition_m": 0.0, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.0},
+      "move": {"type": "push_in", "amount": 0.04, "duration_s": 0.25, "ease": "expo_out", "noise": 0.0}
+    },
+    "hair_detail": {
+      "label": "Hair close-up: back 3/4",
+      "purpose": "Hair construction and ponytail motion. QC and flourish shots.",
+      "anchor": "Head", "anchor_offset": [0.0, 0.02, -0.04],
+      "yaw_deg": 145, "pitch_deg": 10, "roll_deg": 0,
+      "focal_length_mm": 85, "frame_height_m": 0.55, "screen_offset": [0.0, 0.0],
+      "dof": {"enabled": true, "far_start_m": 0.3, "far_transition_m": 1.5, "near_end_m": 0.0, "near_transition_m": 0.0, "amount": 0.08},
+      "move": {"type": "orbit", "amount": 12, "duration_s": 3.0, "ease": "sine_in_out", "noise": 0.0}
+    },
+    "qc_front":    {"label": "QC front (ortho)",    "purpose": "Turnaround", "projection": "orthographic", "anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.0], "yaw_deg": 0,   "pitch_deg": 0, "roll_deg": 0, "focal_length_mm": 50, "frame_height_rel": 1.12, "screen_offset": [0.0, 0.0], "dof": {"enabled": false}, "move": {"type": "static"}},
+    "qc_side":     {"label": "QC side (ortho)",     "purpose": "Turnaround", "projection": "orthographic", "anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.0], "yaw_deg": 90,  "pitch_deg": 0, "roll_deg": 0, "focal_length_mm": 50, "frame_height_rel": 1.12, "screen_offset": [0.0, 0.0], "dof": {"enabled": false}, "move": {"type": "static"}},
+    "qc_rear":     {"label": "QC rear (ortho)",     "purpose": "Turnaround", "projection": "orthographic", "anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.0], "yaw_deg": 180, "pitch_deg": 0, "roll_deg": 0, "focal_length_mm": 50, "frame_height_rel": 1.12, "screen_offset": [0.0, 0.0], "dof": {"enabled": false}, "move": {"type": "static"}},
+    "qc_34":       {"label": "QC 3/4 (perspective)", "purpose": "Turnaround", "anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.0], "yaw_deg": 35, "pitch_deg": 5, "roll_deg": 0, "focal_length_mm": 50, "frame_height_rel": 1.15, "screen_offset": [0.0, 0.0], "dof": {"enabled": false}, "move": {"type": "static"}},
+    "qc_gameplay": {"label": "QC gameplay distance", "purpose": "Does the character still read at match scale? About 90 px tall at 1080p.", "anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.0], "yaw_deg": 90, "pitch_deg": 14, "roll_deg": 0, "focal_length_mm": 35, "frame_height_rel": 12.0, "screen_offset": [0.0, 0.0], "dof": {"enabled": false}, "move": {"type": "static"}}
+  },
+  "transitions": {
+    "gameplay_to_cinematic": {"type": "blend", "duration_s": 0.22, "ease": "cubic_out", "note": "A fast camera blend out of the gameplay camera reads as the game leaning in, not as a scene change. Use 'cut' only on a black or white beat."},
+    "cinematic_to_gameplay": {"type": "blend", "duration_s": 0.35, "ease": "sine_in_out", "note": "Land on the exact gameplay framing the player will need for the next touch."},
+    "skip":                  {"type": "blend", "duration_s": 0.15, "ease": "quad_out"}
+  },
+  "gameplay_camera": {
+    "style": "broadcast_side",
+    "note": "Sideline camera looking across the court. The court's long axis runs left-right on screen, as in the reference. Readability first: the ball, the net and both teams' front rows stay in the safe area.",
+    "court": {"length_m": 18.0, "width_m": 9.0, "net_height_m": 2.24},
+    "focal_length_mm": 35,
+    "elevation_deg": 13,
+    "base_distance_m": 21.0,
+    "min_distance_m": 14.0,
+    "max_distance_m": 29.0,
+    "safe_area": 0.82,
+    "ball_weight": 2.0,
+    "player_weight": 1.0,
+    "look_ahead_s": 0.22,
+    "position_half_life_s": 0.16,
+    "zoom_half_life_s": 0.3,
+    "vertical_follow": {"start_height_m": 4.2, "max_raise_m": 4.5, "pull_out_per_m": 0.9},
+    "dead_zone_m": [0.6, 0.4],
+    "shake": {"max_trauma": 1.0, "decay_per_s": 1.8, "max_offset_m": 0.12, "max_roll_deg": 1.2, "frequency_hz": 18.0}
+  },
+  "qc_render_set": [
+    {"id": "00a_silhouette_front", "shot": "qc_front",    "mode": "silhouette", "pose": "rest"},
+    {"id": "00b_silhouette_side",  "shot": "qc_side",     "mode": "silhouette", "pose": "rest"},
+    {"id": "00c_silhouette_rear",  "shot": "qc_rear",     "mode": "silhouette", "pose": "rest"},
+    {"id": "00d_silhouette_34",    "shot": "qc_34",       "mode": "silhouette", "pose": "rest"},
+    {"id": "00e_silhouette_game",  "shot": "qc_gameplay", "mode": "silhouette", "pose": "ready_stance"},
+    {"id": "01_front",             "shot": "qc_front",    "mode": "beauty",     "pose": "rest",        "lighting": "lookdev_neutral"},
+    {"id": "02_side",              "shot": "qc_side",     "mode": "beauty",     "pose": "rest",        "lighting": "lookdev_neutral"},
+    {"id": "03_rear",              "shot": "qc_rear",     "mode": "beauty",     "pose": "rest",        "lighting": "lookdev_neutral"},
+    {"id": "04_three_quarter",     "shot": "qc_34",       "mode": "beauty",     "pose": "rest",        "lighting": "lookdev_neutral"},
+    {"id": "05_clay",              "shot": "qc_34",       "mode": "clay",       "pose": "rest",        "lighting": "lookdev_neutral"},
+    {"id": "06_face_closeup",      "shot": "cu_face",     "mode": "beauty",     "pose": "rest",        "lighting": "cinematic_soft"},
+    {"id": "07_hair_closeup",      "shot": "hair_detail", "mode": "beauty",     "pose": "rest",        "lighting": "cinematic_soft"},
+    {"id": "08_gameplay_full",     "shot": "qc_gameplay", "mode": "beauty",     "pose": "ready_stance","lighting": "gameplay_readable"},
+    {"id": "09_action_pose",       "shot": "action_track","mode": "beauty",     "pose": "spike_contact","lighting": "cinematic_dramatic"},
+    {"id": "10_splus_pose",        "shot": "keyart_match","mode": "beauty",     "pose": "keyart",      "lighting": "sp_hero"},
+    {"id": "11_splus_closeup",     "shot": "ecu_eyes",    "mode": "beauty",     "pose": "keyart",      "lighting": "sp_hero"},
+    {"id": "12_godot_gameplay",    "shot": "qc_gameplay", "mode": "godot",      "pose": "ready_stance","lighting": "gameplay_readable", "note": "Captured from lookdev/lookdev_stage.tscn, not Blender."}
+  ]
+}
