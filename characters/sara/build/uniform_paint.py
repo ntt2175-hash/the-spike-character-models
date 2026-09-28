@@ -102,11 +102,11 @@ def paint_jersey(path, pal, px=2048):
     ring = [(561 + 1.25 * 33 * math.cos(a_), Y(zs) + 33 * math.sin(a_)) for a_ in np.linspace(0, 2 * math.pi, 72)]
     c.paint(c.mask_stroke(ring, [1.4] * len(ring), blur_mm=0.25) * front, "#ffffff", 0.85)
     # Chest: wordmark over the upper bust, the number just below the apex (front reference hierarchy).
-    wz, nz_ = Y(CHEST_Z + 0.052), Y(CHEST_Z - 0.024)
-    c.text("weasels", 500, wz, 54, "#f4f8fc", SCRIPT_FONT, stroke_mm=4.2, stroke_color="#9ccbec")
-    c.text("weasels", 500, wz, 54, "#f7fbff", SCRIPT_FONT, stroke_mm=1.5, stroke_color="#13254a")
-    c.text("2", 506, nz_ - 4, 84, "#7fb4de", FONT)                                       # soft blue offset shadow
-    c.text("2", 500, nz_, 84, pal["jersey_print"], FONT, stroke_mm=1.6, stroke_color="#13254a")
+    wz, nz_ = Y(CHEST_Z + 0.058), Y(CHEST_Z - 0.03)
+    c.text("weasels", 500, wz, 64, "#f4f8fc", SCRIPT_FONT, stroke_mm=4.6, stroke_color="#9ccbec")
+    c.text("weasels", 500, wz, 64, "#f7fbff", SCRIPT_FONT, stroke_mm=1.6, stroke_color="#13254a")
+    c.text("2", 507, nz_ - 5, 100, "#7fb4de", FONT)                                      # soft blue offset shadow
+    c.text("2", 500, nz_, 100, pal["jersey_print"], FONT, stroke_mm=1.7, stroke_color="#13254a")
     # Round crest near her left strap.
     cx_, cy_ = 586, Y(_LM["neck_z"] - 0.02)
     c.paint(c.mask_ellipse(cx_, cy_, 20, 14, blur_mm=0.3), "#7fb0dc", 1.0)

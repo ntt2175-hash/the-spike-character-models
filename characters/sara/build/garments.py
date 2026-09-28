@@ -216,6 +216,13 @@ def jersey_field(bones, voxel=0.0022):
         f.union(prim, k)
     f.offset(0.007)
     f.union(sdf.ZLoft(drape), 0.03 * sc)
+    # Below the waistband the jersey also clears the shorts' real shape (thigh fronts, the roomy seat):
+    # a superellipse section alone cuts their corners.
+    sf = shorts_field(bones, voxel=0.003)
+    P = f.points(tuple(slice(0, n) for n in f.shape)).reshape(-1, 3)
+    ds = sf.sample_at(P) - (0.002 + 0.007) * sc                       # shorts thickness + ease
+    ds = np.where(P[:, 2] > lm["waistband_z"] + 0.01 * sc, sdf.BIG, ds).reshape(f.shape)
+    f.d = sdf.smin(f.d, ds.astype(np.float32), 0.012 * sc).astype(np.float32)
     f.drape(0.003 * sc, grow=0.0006 * sc)         # fabric bridges small creases (armpit, sternum, spine)
     return f
 
@@ -251,7 +258,7 @@ def shorts_keep(bones):
         hip, knee = _bone(bones, f"{side}UpperLeg")
         ax = (knee - hip) / np.linalg.norm(knee - hip)
         n = ax + _v(sx * 0.2, 0.0, 0.0)
-        p = hip + (knee - hip) * 0.2
+        p = hip + (knee - hip) * 0.3            # a little longer and looser (front reference)
         # This leg's side of the body (x on her left for the left leg): below the opening plane is removed.
         side_region = sdf.HalfSpace(_v(0.0, 0.0, 0.0), _v(-sx, 0.0, 0.0))
         out.append(("remove", _Intersect(_Neg(sdf.HalfSpace(p, n)), side_region)))

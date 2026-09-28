@@ -58,8 +58,8 @@ elif tiles_kind in ("face", "headclay"):
         tiles.append((dict(cu, yaw_deg=-35, pitch_deg=2), "cinematic_soft", (800, 800), "face 3/4 (her left)"))
 elif tiles_kind == "portrait":
     # Match of the front reference (sara_standing_front34.png): head to mid-thigh, near-front, pose "portrait".
-    ref = {"anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.33], "yaw_deg": -8, "pitch_deg": 0, "roll_deg": 0,
-           "focal_length_mm": 60, "frame_height_m": 1.32, "screen_offset": [0, 0], "move": {"type": "static"}}
+    ref = {"anchor": "Hips", "anchor_offset": [0.0, 0.0, 0.37], "yaw_deg": -8, "pitch_deg": 0, "roll_deg": 0,
+           "focal_length_mm": 60, "frame_height_m": 1.36, "screen_offset": [0, 0], "move": {"type": "static"}}
     tiles = [(ref, "lookdev_neutral", (597, 1348), "front reference match"),
              (dict(face, frame_height_m=0.34, yaw_deg=-14, pitch_deg=0, focal_length_mm=85), "lookdev_neutral", (800, 800),
               "face (reference angle)")]

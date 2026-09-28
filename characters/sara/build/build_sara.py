@@ -203,19 +203,34 @@ def garment(name, field, keeps, quads, thickness, pre_decimate=0.3):
     return obj
 
 
-def trim_garment(name, solid, keeps, grow, thickness, quads=4000, margin=0.006):
-    """A thin band (trim, binding, piping) lying on a garment's outer surface: only the region near the
-    band is meshed (fine quads for a narrow strip), then cut exactly to it and thickened."""
+def trim_garment(name, solid, keeps, grow, thickness, quads=4000, margin=0.006, shell=0.03):
+    """A thin band (trim, binding, piping) lying on a garment's outer surface. Only a slab near the band
+    is meshed (a closed region a few cm deep, so remeshing stays robust), then the mesh is cut exactly to
+    the band, every face that is not on the outer surface is dropped, and the strip is thickened."""
     f = solid.copy()
     f.offset(grow)
+    surface = f.copy()
     pts = f.points(tuple(slice(0, n) for n in f.shape)).reshape(-1, 3)
     near = keep_distance(pts, keeps).reshape(f.shape)
     f.d = np.maximum(f.d, (near - margin).astype(np.float32))
-    f.d = np.maximum(f.d, -f.d - 0.008)             # a thin shell under the surface: a small closed region
+    f.d = np.maximum(f.d, -f.d - shell)
     obj = common.sdf_to_object(name, f, LOD0)
+    n0 = len(obj.data.polygons)
+    if n0 > quads * 4:
+        common.decimate(obj, max(0.05, quads * 4 / n0))
     common.smooth(obj, 0.3, 2)
     common.quadriflow(obj, quads)
     cut_surface(obj, keeps)
+    # Keep the band on the outer surface only (the slab's inner wall also lies inside the band's cut).
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    C = np.array([tuple(fc.calc_center_median()) for fc in bm.faces]) if bm.faces else np.zeros((0, 3))
+    if len(C):
+        off = np.abs(surface.sample_at(C)) > 0.004
+        bmesh.ops.delete(bm, geom=[fc for fc, o in zip(bm.faces, off) if o], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(obj.data)
+    bm.free()
     thicken(obj, thickness)
     return obj
 
