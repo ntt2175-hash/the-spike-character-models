@@ -115,9 +115,9 @@ def paint_jersey(path, pal, px=2048):
              cy_ + 6.5 * (1.0 if i % 2 == 0 else 0.42) * math.sin(math.pi / 2 + i * math.pi / 5)) for i in range(10)]
     c.paint(c.mask_polygon(star, blur_mm=0.2), "#3f78b8", 1.0)
     # Back number between the shoulder blades (the back seam is at u = 0 / 1).
-    bz = Y(_LM["chest_z"] + 0.02)
+    bz = Y(_LM["chest_z"] + 0.005)
     for bx in (0.0, 1000.0):
-        c.text("2", bx, bz, 130, pal["jersey_print"], FONT, stroke_mm=1.8, stroke_color="#13254a")
+        c.text("2", bx, bz, 175, pal["jersey_print"], FONT, stroke_mm=2.0, stroke_color="#13254a")
     # Fine sports-mesh weave everywhere (reads up close, disappears at game distance).
     weave = ((np.sin(X * 2.6) * np.sin(Yg * 3.1)) > 0.55).astype(np.float32)
     c.paint(weave, "#000000", 0.035)

@@ -67,6 +67,20 @@ class VNeck:
         return np.minimum(dv, self.back.eval(P))
 
 
+class _NeckCylinder:
+    """Everything within r of the neck axis above a flat base: the back and side neckline."""
+
+    def __init__(self, a, b, r):
+        self.cap = sdf.Capsule(a, b, r)
+        self.z0 = float(a[2])
+
+    def bbox(self):
+        return None
+
+    def eval(self, P):
+        return np.maximum(self.cap.eval(P), self.z0 - P[..., 2])
+
+
 class Offset:
     """prim grown by d (eval - d): 'within d of the prim'."""
 
@@ -103,8 +117,8 @@ def jersey_cuts(bones):
     sc, kt, nz = lm["s"], lm["kt"], lm["neck_z"]
     # Narrow straps (front reference): the armholes reach further in than a tank top's.
     ax, az = lm["shoulder_x"] + 0.016 * sc, lm["shoulder_z"] - 0.082 * sc * kt
-    back_neck = sdf.Ellipsoid(_v(0.0, -0.012 * sc, nz + 0.058 * sc), _v(0.058, 0.085 * lm["torso_half_depth"] / (0.086 * sc), 0.07) * sc,
-                              sdf.rotation_to(_v(0.0, 0.42, 1.0)))
+    # Back / side neckline: a clean line at the base of the neck (never a collar riding up the neck).
+    back_neck = _NeckCylinder(_v(0.0, 0.004 * sc, nz + 0.005 * sc), _v(0.0, 0.022 * sc, nz + 0.25 * sc), 0.06 * sc)
     return {
         # V-neck: the point sits just below the collarbones; the back neckline stays round and higher.
         "neck": [VNeck(nz - 0.05 * sc, 0.052 * sc, nz + 0.03 * sc, -0.015 * sc, back_neck)],
@@ -139,19 +153,20 @@ def jersey_trims(bones, jersey_thickness=0.0022):
 
 
 def _hip_extents(bones, z0, z1, voxel=0.004):
-    """Per-height outer extents of the body below the waist (torso + legs): (z, max |x|, min y, max y)."""
-    m = bodymod.master(bones)
-    f = m.body_field(voxel, include=("torso", "legs"), bmin=(-0.25, -0.2, z0), bmax=(0.25, 0.2, z1))
+    """Per-height outer extents of what the jersey hangs over below the waist - the SHORTS (roomier than
+    the legs at the thigh tops), else the body: rows (z, max |x|, min y, max y)."""
+    f = shorts_field(bones, voxel=voxel)
     solid = f.d < 0
     out = []
     xs = f.origin[0] + np.arange(f.shape[0]) * f.voxel
     ys = f.origin[1] + np.arange(f.shape[1]) * f.voxel
     for k in range(f.shape[2]):
+        z = f.origin[2] + k * f.voxel
         sl = solid[:, :, k]
-        if not sl.any():
+        if z < z0 or z > z1 or not sl.any():
             continue
         ix, iy = np.nonzero(sl)
-        out.append((f.origin[2] + k * f.voxel, float(np.abs(xs[ix]).max()), float(ys[iy].min()), float(ys[iy].max())))
+        out.append((z, float(np.abs(xs[ix]).max()), float(ys[iy].min()), float(ys[iy].max())))
     return np.asarray(out)
 
 
@@ -175,7 +190,7 @@ def jersey_field(bones, voxel=0.0022):
     i_chest = int(np.argmin(np.abs(rows[:, 0] - m.tz(0.75))))
     w_chest = rows[i_chest, 1]
     ext = _hip_extents(bones, hem - 0.05 * sc, waist)
-    ease = 0.013 * sc                                  # shorts (fit + thickness) + the jersey's own ease
+    ease = 0.009 * sc                                  # shorts thickness + the jersey's own ease
     drape = []
     zs = np.linspace(hem - 0.03 * sc, m.tz(0.93), 26)
     for z in zs:

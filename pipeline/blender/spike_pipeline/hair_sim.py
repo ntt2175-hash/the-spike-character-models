@@ -53,14 +53,22 @@ class Wind:
         return v
 
 
+# How much of the free-stream wind reaches each kind of strand: the head shelters the fringe (it flutters,
+# it does not flip up), long free masses take the full flow, fine flyaways even more.
+WIND_EXPOSURE = {"hair_bang": 0.05, "hair_ahoge": 0.35, "hair_side": 0.85, "hair_ponytail": 1.0, "hair_flyaway": 1.2,
+                 "ribbon": 1.0, "cloth": 0.5}
+
+
 class _Chain:
-    def __init__(self, names, params):
+    def __init__(self, names, params, exposure, offset):
         self.names = names
         self.p = params
+        self.exposure = exposure
+        self.offset = offset          # where this strand samples the turbulence: strands separate, never march in step
 
 
 class ChainSim:
-    def __init__(self, rig, character, prefixes=("hair_", "ribbon_"), substeps_per_second=240):
+    def __init__(self, rig, character, prefixes=("hair_", "ribbon_"), substeps_per_second=240, seed=11):
         self.rig = rig
         self.h = float(character["proportions"]["height_m"])
         self.dt = 1.0 / substeps_per_second
@@ -71,13 +79,15 @@ class ChainSim:
             specs[(c["id"], c.get("side"))] = c
         bones = rig.data.bones
         self.chains = []
+        rng = np.random.default_rng(seed)
         for (cid, side), c in specs.items():
             if not cid.startswith(tuple(prefixes)):
                 continue
             suffix = f"_{side}" if side else ""
             names = [f"{cid}_{i:02d}{suffix}" for i in range(1, int(c["bones"]) + 1)]
             if all(n in bones for n in names):
-                self.chains.append(_Chain(names, c))
+                exposure = next((v for k, v in WIND_EXPOSURE.items() if cid.startswith(k)), 1.0)
+                self.chains.append(_Chain(names, c, exposure, rng.normal(size=3) * 0.35))
         self.colliders = self._colliders(character)
         bpy.context.view_layer.update()
         self._init_particles()
@@ -150,7 +160,7 @@ class ChainSim:
             air = 2.5 + 7.0 * float(p.get("wind_response", 0.5))          # 1/s: how fast the strand follows the air
             g = np.array([0.0, 0.0, -9.81 * float(p.get("gravity", 0.5)) * 1.6])
             k_rest = float(p.get("stiffness", 1.0)) * 18.0                 # 1/s^2 spring toward the rest shape
-            acc = g[None, :] + air * (self.wind(x, self.t) - vel)
+            acc = g[None, :] + air * (ch.exposure * self.wind(x + ch.offset, self.t) - vel)
             # Stiffness: each joint is pulled toward where the rest shape would put it from its parent joint.
             target = np.empty_like(x)
             target[0] = rest[0]

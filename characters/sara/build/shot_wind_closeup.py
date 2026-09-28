@@ -36,7 +36,7 @@ for o in bpy.data.objects:                      # a fuller, wider-open gaze for 
 # Camera: high and close, looking down into the upturned face; the face right of center, hair flowing
 # into the left of the frame (reference composition, 2.18:1).
 shot = {"anchor": "eyes", "anchor_offset": [0.0, 0.0, -0.01], "yaw_deg": -8, "pitch_deg": 24, "roll_deg": -4,
-        "focal_length_mm": 55, "frame_height_m": 0.34, "screen_offset": [0.22, 0.02], "move": {"type": "static"}}
+        "focal_length_mm": 55, "frame_height_m": 0.3, "screen_offset": [0.24, 0.04], "move": {"type": "static"}}
 res = (1320, 606)
 scene.render.resolution_x, scene.render.resolution_y = res
 cam = bpy.data.objects.get("dev_cam") or camera.new_camera("dev_cam")
@@ -50,10 +50,29 @@ gym = {"key": {"azimuth_deg": -20, "elevation_deg": 34, "color": "#fff3e6", "ene
        "environment": {"background": "#7a4118", "env_light_scale": 0.3, "exposure": 1.0, "glow": 0.45, "saturation": 1.05},
        "face_shadow_soft": 0.03, "outline_scale": 1.0}
 lighting.apply_profile(gym, character["palette"], cam)
+# Backdrop: a warm, out-of-focus gym - a soft glow behind her head falling off to deep amber at the edges
+# (camera-facing background only; the ambient light stays the profile's).
+nt = scene.world.node_tree
+bg = nt.nodes["spike_bg"]
+tc = nt.nodes.new("ShaderNodeTexCoord")
+grad = nt.nodes.new("ShaderNodeTexGradient")
+grad.gradient_type = "SPHERICAL"
+mapn = nt.nodes.new("ShaderNodeMapping")
+mapn.inputs["Location"].default_value = (-0.15, 0.1, 0.0)
+mapn.inputs["Scale"].default_value = (0.9, 1.7, 1.0)
+ramp = nt.nodes.new("ShaderNodeValToRGB")
+ramp.color_ramp.elements[0].color = (0.16, 0.07, 0.02, 1.0)
+ramp.color_ramp.elements[1].color = (0.78, 0.44, 0.16, 1.0)
+ramp.color_ramp.elements[1].position = 0.85
+nt.links.new(tc.outputs["Window"], mapn.inputs["Vector"])
+nt.links.new(mapn.outputs["Vector"], grad.inputs["Vector"])
+nt.links.new(grad.outputs["Fac"], ramp.inputs["Fac"])
+nt.links.new(ramp.outputs["Color"], bg.inputs["Color"])
 
 # Hair physics: settle into the wind, then keep simulating for the clip.
-sim = hair_sim.ChainSim(rig, character, prefixes=("hair_", "ribbon_"))
-sim.wind = hair_sim.Wind(direction=(-1.0, 0.25, 0.32), speed=7.5, gust=0.4, turbulence=0.5, seed=7)
+# The fringe keeps its sculpted shape (short, stiff, sheltered by the head); everything else flies.
+sim = hair_sim.ChainSim(rig, character, prefixes=("hair_side", "hair_ponytail", "hair_flyaway", "hair_ahoge", "ribbon_"))
+sim.wind = hair_sim.Wind(direction=(-1.0, 0.25, 0.3), speed=5.5, gust=0.45, turbulence=0.75, seed=7)
 sim.run(2.5)
 sim.apply()
 scene.render.filepath = str(out / "still.png")
